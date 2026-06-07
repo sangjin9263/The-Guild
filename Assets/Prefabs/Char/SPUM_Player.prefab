@@ -137,6 +137,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SpumTopDownController
   speed: 3
   spumPrefabs: {fileID: 6477006190717307058}
+  aimCamera: {fileID: 0}
+  aimMinDistance: 0.15
 --- !u!114 &8313781893544396140
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -151,12 +153,104 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerSlashCombo
   slashA: {fileID: 6056920819810827253, guid: e6e2af0108f6fba4598ee381fd7a5db9, type: 3}
   slashB: {fileID: 3291630615977966062, guid: dcf9e16e5fc98294fa2090af29d35b68, type: 3}
+  slashASpawn:
+    forward: 0
+    side: 0
+    height: 0.3
   slashARotation: {x: 0, y: 180, z: 330}
+  slashAScale: {x: 0.5, y: 0.25, z: 0.25}
+  slashAForwardAngle: 180
+  slashAHitbox:
+    sizeMultiplier: 1.1
+    parts:
+    - length: 0.7
+      width: 0.8
+      forward: 0.18
+      side: -0.5
+      height: 0
+      angleOffset: -90
+    - length: 0.8
+      width: 1
+      forward: -0.1
+      side: 0
+      height: 0
+      angleOffset: -60
+    - length: 1
+      width: 0.7
+      forward: 0.25
+      side: 0
+      height: -0.7
+      angleOffset: -35
+    - length: 1
+      width: 0.8
+      forward: 0.2
+      side: 0
+      height: -0.35
+      angleOffset: 15
+    - length: 1.3
+      width: 0.5
+      forward: -0.15
+      side: 0.8
+      height: 0.8
+      angleOffset: 45
+  slashADamage: 1
+  slashBSpawn:
+    forward: 0
+    side: 0
+    height: 0.3
   slashBRotation: {x: 0, y: 0, z: 150}
-  slashOffset: {x: 0, y: 0, z: 0}
+  slashBScale: {x: 0.5, y: 0.25, z: 0.25}
+  slashBForwardAngle: 180
+  slashBHitbox:
+    sizeMultiplier: 1.1
+    parts:
+    - length: 0.7
+      width: 0.8
+      forward: 0.18
+      side: 0.5
+      height: 0
+      angleOffset: 90
+    - length: 0.8
+      width: 1
+      forward: -0.1
+      side: 0
+      height: 0
+      angleOffset: 60
+    - length: 1
+      width: 0.7
+      forward: 0.25
+      side: 0
+      height: 0.7
+      angleOffset: 35
+    - length: 1
+      width: 0.8
+      forward: 0.2
+      side: 0
+      height: 0.35
+      angleOffset: -15
+    - length: 1.3
+      width: 0.5
+      forward: -0.15
+      side: -0.8
+      height: -0.8
+      angleOffset: -45
+  slashBDamage: 1
+  forwardDistanceMoving: 1
+  forwardDistanceIdle: 0.6
+  showHitboxDebug: 1
+  toggleHitboxDebugKey: 104
+  hitboxDebugDuration: 0.35
+  hitboxFillColor: {r: 1, g: 0.15, b: 1, a: 0.35}
+  hitboxSortingLayer: Layer 1
+  hitboxSortingOrder: 50
+  hitImpactPrefab: {fileID: 7450177348350331625, guid: b3eb72d09894c8e4998eaf6670865aae,
+    type: 3}
+  hitImpactLifetime: 1
+  hitImpactOffset: {x: 0, y: 0}
+  pivotOffset: {x: 0, y: 0, z: 0}
   comboResetTime: 1
   vfxLifetime: 2
-  spumPrefabs: {fileID: 6477006190717307058}
+  spumPrefabs: {fileID: 0}
 --- !u!1001 &2359206598403999930
 PrefabInstance:
   m_ObjectHideFlags: 0

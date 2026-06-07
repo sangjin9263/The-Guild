@@ -36,48 +36,61 @@ public class SPUM_Prefabs : MonoBehaviour
     public List<AnimationClip> OTHER_List = new();
     public void OverrideControllerInit()
     {
-        Animator animator = _anim;
-        OverrideController = new AnimatorOverrideController();
-        OverrideController.runtimeAnimatorController= animator.runtimeAnimatorController;
+        if (_anim == null)
+            return;
 
-        // 모든 애니메이션 클립을 가져옵니다
-        AnimationClip[] clips = animator.runtimeAnimatorController.animationClips;
+        var animator = _anim;
+        var currentController = animator.runtimeAnimatorController;
 
-        foreach (AnimationClip clip in clips)
+        if (OverrideController != null
+            && currentController == OverrideController
+            && StateAnimationPairs.Count > 0)
+            return;
+
+        var baseController = currentController;
+        if (baseController is AnimatorOverrideController existingOverride)
         {
-            // 복제된 클립으로 오버라이드합니다
-            OverrideController[clip.name] = clip;
+            if (OverrideController == existingOverride && StateAnimationPairs.Count > 0)
+                return;
+
+            baseController = existingOverride.runtimeAnimatorController;
         }
 
-        animator.runtimeAnimatorController= OverrideController;
+        if (baseController == null)
+        {
+            Debug.LogWarning($"SPUM_Prefabs '{name}' has no base AnimatorController to override.", this);
+            return;
+        }
+
+        if (OverrideController == null)
+            OverrideController = new AnimatorOverrideController();
+
+        OverrideController.runtimeAnimatorController = baseController;
+
+        foreach (AnimationClip clip in baseController.animationClips)
+            OverrideController[clip.name] = clip;
+
+        animator.runtimeAnimatorController = OverrideController;
+        RebuildStateAnimationPairs();
+    }
+
+    private void RebuildStateAnimationPairs()
+    {
+        StateAnimationPairs.Clear();
         foreach (PlayerState state in Enum.GetValues(typeof(PlayerState)))
         {
             var stateText = state.ToString();
-            StateAnimationPairs[stateText] = new List<AnimationClip>();
-            switch (stateText)
+            StateAnimationPairs[stateText] = stateText switch
             {
-                case "IDLE":
-                    StateAnimationPairs[stateText] = IDLE_List;
-                    break;
-                case "MOVE":
-                    StateAnimationPairs[stateText] = MOVE_List;
-                    break;
-                case "ATTACK":
-                    StateAnimationPairs[stateText] = ATTACK_List;
-                    break;
-                case "DAMAGED":
-                    StateAnimationPairs[stateText] = DAMAGED_List;
-                    break;
-                case "DEBUFF":
-                    StateAnimationPairs[stateText] = DEBUFF_List;
-                    break;
-                case "DEATH":
-                    StateAnimationPairs[stateText] = DEATH_List;
-                    break;
-                case "OTHER":
-                    StateAnimationPairs[stateText] = OTHER_List;
-                    break;
-            }
+                "IDLE" => IDLE_List,
+                "MOVE" => MOVE_List,
+                "ATTACK" => ATTACK_List,
+                "DAMAGED" => DAMAGED_List,
+                "DEBUFF" => DEBUFF_List,
+                "DEATH" => DEATH_List,
+                "OTHER" => OTHER_List,
+                _ => new List<AnimationClip>()
+            };
         }
     }
     public bool allListsHaveItemsExist(){

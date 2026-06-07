@@ -15763,6 +15763,7 @@ GameObject:
   - component: {fileID: 847603526}
   - component: {fileID: 847603525}
   - component: {fileID: 847603530}
+  - component: {fileID: 847603531}
   m_Layer: 20
   m_Name: SPUM_Player
   m_TagString: Player
@@ -16000,6 +16001,19 @@ MonoBehaviour:
   comboResetTime: 1
   vfxLifetime: 2
   spumPrefabs: {fileID: 1407922965}
+--- !u!114 &847603531
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 847603524}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 90939be4c57d9b548adb287dacc552e2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Hurtbox
+  maxHealth: 3
 --- !u!1001 &848930649
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -16281,6 +16295,8 @@ GameObject:
   - component: {fileID: 872879466}
   - component: {fileID: 872879468}
   - component: {fileID: 872879469}
+  - component: {fileID: 872879471}
+  - component: {fileID: 872879470}
   m_Layer: 20
   m_Name: Skull_test
   m_TagString: Untagged
@@ -16311,7 +16327,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 872879464}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7b8adbab3a28096498a6f5b65b6049f6, type: 3}
   m_Name: 
@@ -16389,6 +16405,62 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hurtbox
   maxHealth: 3
+--- !u!114 &872879470
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 872879464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e9690390bcf9054ba863b0f89128650, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterAttackController
+  playerTag: Player
+  chaseSpeed: 1.6
+  attackTriggerRange: 3.5
+  loseInterestRange: 9
+  telegraphDuration: 0.85
+  minAttackLength: 2
+  maxAttackLength: 5.5
+  lengthPadding: 0.35
+  attackWidth: 0.55
+  innerLineWidthRatio: 0.72
+  dashSpeed: 9
+  dashDamage: 1
+  dashHitboxForward: 0.35
+  dashHitboxLength: 0.7
+  recoverDuration: 0.55
+  telegraphVisual: {fileID: 0}
+  spumPrefabs: {fileID: 1890618675}
+--- !u!50 &872879471
+Rigidbody2D:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 872879464}
+  m_BodyType: 1
+  m_Simulated: 1
+  m_UseFullKinematicContacts: 0
+  m_UseAutoMass: 0
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_GravityScale: 0
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_Interpolate: 0
+  m_SleepingMode: 1
+  m_CollisionDetection: 1
+  m_Constraints: 4
 --- !u!1001 &874798353
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -34193,6 +34265,18 @@ MonoBehaviour:
   sortingLayerName: Layer 1
   sortingOrderOffset: 20
   referenceGroup: {fileID: 872879467}
+--- !u!114 &1890618675 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6657341752872958536, guid: 5d78e17d96d31954d90af242bc7eee80,
+    type: 3}
+  m_PrefabInstance: {fileID: 1890618671}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1798657296}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28ac21711b0ec40a0812d33a586eb7ec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &1899773001
 PrefabInstance:
   m_ObjectHideFlags: 0

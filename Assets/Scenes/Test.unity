@@ -16432,7 +16432,10 @@ MonoBehaviour:
   dashHitboxForward: 0.35
   dashHitboxLength: 0.7
   recoverDuration: 0.55
+  dashTrailBurstPrefab: {fileID: 5656072435818497350, guid: 9664640b265322c4faa886d2a193b5db,
+    type: 3}
   telegraphVisual: {fileID: 0}
+  dashTrailVisual: {fileID: 0}
   spumPrefabs: {fileID: 1890618675}
 --- !u!50 &872879471
 Rigidbody2D:

@@ -10,7 +10,13 @@ public class SyncParticleSorting : MonoBehaviour
 
     public void Configure(SortingGroup group)
     {
+        Configure(group, sortingOrderOffset);
+    }
+
+    public void Configure(SortingGroup group, int orderOffset)
+    {
         referenceGroup = group;
+        sortingOrderOffset = orderOffset;
         Apply();
     }
 

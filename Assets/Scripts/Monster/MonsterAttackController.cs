@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Cainos.PixelArtTopDown_Basic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -16,6 +17,12 @@ public class MonsterAttackController : MonoBehaviour
 
     private static readonly Collider2D[] OverlapBuffer = new Collider2D[8];
     private static readonly RaycastHit2D[] BlockerCastBuffer = new RaycastHit2D[16];
+    private static readonly ContactFilter2D StairTriggerFilter = new()
+    {
+        useTriggers = true,
+        useLayerMask = true,
+        layerMask = Physics2D.AllLayers
+    };
 
     [Header("Target")]
     [SerializeField] private string playerTag = "Player";
@@ -193,8 +200,7 @@ public class MonsterAttackController : MonoBehaviour
     private static GameObject LoadDefaultDashBurstPrefab()
     {
 #if UNITY_EDITOR
-        return UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
-            "Assets/Prefabs/VFX/Wind_Ground_Alpha_Left_0.5_Burst.prefab");
+        return UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(DashTrailVisual.DefaultBurstPrefabPath);
 #else
         return null;
 #endif
@@ -285,7 +291,7 @@ public class MonsterAttackController : MonoBehaviour
             return;
         }
 
-        if (distance <= attackTriggerRange && HasClearDashPathToPlayer(distance, toPlayer))
+        if (distance <= attackTriggerRange && HasClearAttackPath(distance, toPlayer))
         {
             BeginTelegraph(toPlayer, distance);
             return;
@@ -391,7 +397,7 @@ public class MonsterAttackController : MonoBehaviour
         var toPlayer = (Vector2)playerTransform.position - rb.position;
         var distanceToPlayer = toPlayer.magnitude;
         var inRange = distanceToPlayer <= attackTriggerRange;
-        var pathClear = HasClearDashPathToPlayer(distanceToPlayer, toPlayer);
+        var pathClear = HasClearAttackPath(distanceToPlayer, toPlayer);
 
         if (!telegraphAimLocked)
         {
@@ -587,6 +593,30 @@ public class MonsterAttackController : MonoBehaviour
         return allowedDistance >= distanceToPlayer - 0.12f;
     }
 
+    private bool HasClearAttackPath(float distanceToPlayer, Vector2 toPlayer)
+    {
+        if (HasClearDashPathToPlayer(distanceToPlayer, toPlayer))
+            return true;
+
+        return IsOnStairWalkArea();
+    }
+
+    private bool IsOnStairWalkArea()
+    {
+        if (physicsCollider == null)
+            return false;
+
+        var count = physicsCollider.Overlap(StairTriggerFilter, OverlapBuffer);
+        for (var i = 0; i < count; i++)
+        {
+            var collider = OverlapBuffer[i];
+            if (collider.isTrigger && collider.GetComponent<StairsLayerTrigger>() != null)
+                return true;
+        }
+
+        return false;
+    }
+
     private float GetBlockerLimitedDistance(Vector2 direction, float maxDistance)
     {
         if (maxDistance <= 0f || physicsCollider == null)
@@ -624,13 +654,9 @@ public class MonsterAttackController : MonoBehaviour
 
     private bool IsDashObstacleHit(Collider2D collider)
     {
-        if (collider == null || collider.isTrigger)
-            return false;
-
-        if (IsOwnerCollider(collider) || IsPlayerCollider(collider))
-            return false;
-
-        var attached = collider.attachedRigidbody;
-        return attached == null || attached.bodyType == RigidbodyType2D.Static;
+        return DashPathObstacleUtility.ShouldBlockDash(
+            collider,
+            gameObject.layer,
+            c => IsOwnerCollider(c) || IsPlayerCollider(c));
     }
 }

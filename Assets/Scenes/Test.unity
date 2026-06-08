@@ -15987,7 +15987,7 @@ MonoBehaviour:
   slashBDamage: 1
   forwardDistanceMoving: 1
   forwardDistanceIdle: 0.6
-  showHitboxDebug: 1
+  showHitboxDebug: 0
   toggleHitboxDebugKey: 104
   hitboxDebugDuration: 0.35
   hitboxFillColor: {r: 1, g: 0.15, b: 1, a: 0.35}

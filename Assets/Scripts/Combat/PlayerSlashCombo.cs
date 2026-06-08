@@ -102,7 +102,7 @@ public class PlayerSlashCombo : MonoBehaviour
     [SerializeField] private float forwardDistanceIdle = 0.45f;
 
     [Header("Hitbox Debug")]
-    [SerializeField] private bool showHitboxDebug = true;
+    [SerializeField] private bool showHitboxDebug;
     [SerializeField] private KeyCode toggleHitboxDebugKey = KeyCode.H;
     [SerializeField] private float hitboxDebugDuration = 0.35f;
     [SerializeField] private Color hitboxFillColor = new(1f, 0.15f, 1f, 0.35f);

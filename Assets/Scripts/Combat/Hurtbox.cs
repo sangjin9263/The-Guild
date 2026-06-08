@@ -40,9 +40,11 @@ public class Hurtbox : MonoBehaviour
     public void ReceiveHit(HitInfo hit)
     {
         health -= hit.Damage;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log($"{name} took {hit.Damage} damage. HP {health}/{maxHealth}", this);
 
         if (health <= 0f)
             Debug.Log($"{name} defeated.", this);
+#endif
     }
 }

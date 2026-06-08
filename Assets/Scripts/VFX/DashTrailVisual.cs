@@ -4,7 +4,7 @@ using UnityEngine.Rendering;
 [DisallowMultipleComponent]
 public class DashTrailVisual : MonoBehaviour
 {
-    private const string DefaultBurstPrefabPath =
+    public const string DefaultBurstPrefabPath =
         "Assets/Prefabs/VFX/Wind_Ground_Alpha_Left_0.5_Burst.prefab";
 
     [SerializeField] private GameObject burstPrefab;

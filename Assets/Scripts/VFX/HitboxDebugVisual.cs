@@ -13,6 +13,9 @@ public static class HitboxDebugVisual
         string sortingLayerName = "Layer 1",
         int sortingOrder = 50)
     {
+#if !(UNITY_EDITOR || DEVELOPMENT_BUILD)
+        return;
+#endif
         if (duration <= 0f || size.x <= 0f || size.y <= 0f)
             return;
 

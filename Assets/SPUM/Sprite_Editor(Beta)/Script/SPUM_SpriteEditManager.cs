@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿#if UNITY_EDITOR
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
@@ -7,7 +8,6 @@ using UnityEditor.U2D.Sprites;
 [ExecuteInEditMode]
 public class SPUM_SpriteEditManager : MonoBehaviour
 {
-    #if UNITY_EDITOR
     public SPUM_SpriteList _spriteObj;
     // public Sprite _hair;
     // public Sprite _mustache;
@@ -309,5 +309,5 @@ public class SPUM_SpriteEditManager : MonoBehaviour
         dataProvider.InitSpriteEditorDataProvider();
         return dataProvider;
     }
-    #endif
 }
+#endif

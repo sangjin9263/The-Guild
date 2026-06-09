@@ -66,8 +66,8 @@ public static class DesktopOverlaySetup
         Debug.Log(
             "Game view preview configured.\n" +
             $"- Aspect: {width} x {height} (Guild Overlay)\n" +
-            "- Press Shift+Space on the Game tab to maximize it before Play.\n" +
-            "- Play mode layout now follows the Game view size, not full monitor width.");
+            "- Develop at 1920x1080, then add a 3440x1440 (or your monitor) Game view size to verify ultrawide.\n" +
+            "- Builds use the full monitor when Match Display Size is enabled on DesktopOverlay.");
     }
 
     private static int FindOrAddGameViewSize(int width, int height, string label)
@@ -163,8 +163,6 @@ public static class DesktopOverlaySetup
         var scene = EditorSceneManager.OpenScene(MainScenePath, OpenSceneMode.Single);
         ConfigureMainCamera();
         EnsureDesktopOverlayObjects();
-        ZoneLayoutSetup.ApplyZoneLayout(paintStarterGroundIfEmpty: true);
-        ConfigureBattleArena();
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
         Debug.Log("Main scene configured for desktop overlay.");
@@ -211,7 +209,7 @@ public static class DesktopOverlaySetup
         camera.allowMSAA = false;
         camera.orthographic = true;
         camera.orthographicSize = DesktopOverlaySettings.EffectiveOrthographicSize;
-        SideViewCamera.Apply(camera, CombatGroundQuery.ResolveCombatGround());
+        SideViewCamera.Apply(camera);
 
         var urpCamera = camera.GetComponent<UniversalAdditionalCameraData>();
         if (urpCamera == null)
@@ -252,10 +250,6 @@ public static class DesktopOverlaySetup
             serializedBootstrap.FindProperty("matchDisplaySize").boolValue = true;
             serializedBootstrap.ApplyModifiedPropertiesWithoutUndo();
         }
-    }
-
-    private static void ConfigureBattleArena()
-    {
     }
 
     private static void PrepareMainSceneForBuild()

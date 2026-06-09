@@ -36,6 +36,8 @@ public static class BuildingUISetup
 
     public static void EnsureBuildingPanel()
     {
+        CleanupDuplicateBuildingUiCanvas();
+
         if (Object.FindFirstObjectByType<BuildingPanelUI>() != null)
             return;
 
@@ -70,6 +72,36 @@ public static class BuildingUISetup
         serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 
+    private static void CleanupDuplicateBuildingUiCanvas()
+    {
+        var controllers = Object.FindObjectsByType<BuildingPanelUI>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        if (controllers.Length <= 1)
+            return;
+
+        BuildingPanelUI keep = null;
+        foreach (var controller in controllers)
+        {
+            if (controller.gameObject.activeInHierarchy)
+            {
+                keep = controller;
+                break;
+            }
+        }
+
+        keep ??= controllers[0];
+
+        foreach (var controller in controllers)
+        {
+            if (controller == keep)
+                continue;
+
+            Object.DestroyImmediate(controller.gameObject);
+        }
+    }
+
     public static void ApplyBuildingPanelLayout()
     {
         var controller = Object.FindFirstObjectByType<BuildingPanelUI>();
@@ -92,7 +124,7 @@ public static class BuildingUISetup
             return;
         }
 
-        ApplyPanelRect(panelRoot.GetComponent<RectTransform>());
+        ApplyPanelRect(controller.GetComponent<RectTransform>(), panelRoot.GetComponent<RectTransform>());
     }
 
     private static void ConfigureCanvasScaler(CanvasScaler scaler)
@@ -100,27 +132,27 @@ public static class BuildingUISetup
         if (scaler == null)
             return;
 
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.uiScaleMode = DesktopOverlaySettings.UseFixedPanelLayout
+            ? CanvasScaler.ScaleMode.ConstantPixelSize
+            : CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.scaleFactor = 1f;
         scaler.referenceResolution = DesktopOverlaySettings.WindowSize;
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-        // Match window height so UI fills the full overlay (game + UI headroom).
         scaler.matchWidthOrHeight = 1f;
     }
 
-    private static void ApplyPanelRect(RectTransform panelRect)
+    private static void ApplyPanelRect(RectTransform canvasRect, RectTransform panelRect)
     {
+        if (canvasRect != null)
+            DesktopOverlaySettings.ApplyFixedReferenceRectOnScreen(
+                canvasRect,
+                DesktopOverlaySettings.GetDefaultUiZoneRect());
+
         if (panelRect == null)
             return;
 
-        var uiZone = DesktopOverlaySettings.GetDefaultUiZoneRect();
-        var refWidth = DesktopOverlaySettings.ReferenceWidth;
-        var refHeight = DesktopOverlaySettings.ReferenceHeight;
-        panelRect.anchorMin = new Vector2(uiZone.x / refWidth, uiZone.y / refHeight);
-        panelRect.anchorMax = new Vector2(
-            (uiZone.x + uiZone.width) / refWidth,
-            (uiZone.y + uiZone.height) / refHeight);
-        panelRect.anchoredPosition = Vector2.zero;
-        panelRect.sizeDelta = Vector2.zero;
+        panelRect.anchorMin = Vector2.zero;
+        panelRect.anchorMax = Vector2.one;
         panelRect.offsetMin = Vector2.zero;
         panelRect.offsetMax = Vector2.zero;
     }
@@ -164,12 +196,8 @@ public static class BuildingUISetup
 
         var panelRect = panel.GetComponent<RectTransform>();
         var uiZone = DesktopOverlaySettings.GetDefaultUiZoneRect();
-        var refWidth = DesktopOverlaySettings.ReferenceWidth;
-        var refHeight = DesktopOverlaySettings.ReferenceHeight;
-        panelRect.anchorMin = new Vector2(uiZone.x / refWidth, uiZone.y / refHeight);
-        panelRect.anchorMax = new Vector2(
-            (uiZone.x + uiZone.width) / refWidth,
-            (uiZone.y + uiZone.height) / refHeight);
+        panelRect.anchorMin = Vector2.zero;
+        panelRect.anchorMax = Vector2.one;
         panelRect.offsetMin = Vector2.zero;
         panelRect.offsetMax = Vector2.zero;
 

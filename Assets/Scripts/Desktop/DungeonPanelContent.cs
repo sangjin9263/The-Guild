@@ -9,7 +9,9 @@ public class DungeonPanelContent : PanelWorldContent
     [SerializeField] private Transform propsRoot;
     [SerializeField] private Transform portalRoot;
     [SerializeField] private Transform battleRoot;
+    [Tooltip("Default for new portals in editor setup. Move Portal in the Scene to place it.")]
     [SerializeField] private float portalOffsetX = -3f;
+    [Tooltip("Default for new portals in editor setup. Move Portal in the Scene to place it.")]
     [SerializeField] private float portalOffsetY = -3f;
 
     public int SlotIndex => slotIndex;
@@ -23,17 +25,19 @@ public class DungeonPanelContent : PanelWorldContent
         Camera camera,
         bool editorPreview = false)
     {
-        var center3 = RectCenterToWorld(rect, camera);
-        var scale = editorPreview ? 1f : GetWorldScale(rect, scaleReferenceHeight, camera);
-        ApplyContentRootLayout(
-            center3,
-            scale,
+        var designSize = new Vector2(
+            DesktopOverlaySettings.DungeonSlotWidth,
+            scaleReferenceHeight);
+
+        ApplyPanelWorldLayout(
+            rect,
+            camera,
+            designSize,
+            editorPreview,
             groundTilemap,
             propsRoot,
             portalRoot,
-            battleRoot,
-            portalOffsetX,
-            portalOffsetY);
+            battleRoot);
     }
 
     public void SetVisible(bool visible)

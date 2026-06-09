@@ -12,6 +12,12 @@ public class BuildingPanelUI : MonoBehaviour
 
     private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         Instance = this;
 
         if (panelRoot != null)
@@ -85,26 +91,26 @@ public class BuildingPanelUI : MonoBehaviour
         if (panelRoot == null)
             return;
 
+        var canvasRect = GetComponent<RectTransform>();
+        var uiZoneRect = DesktopOverlaySettings.GetDefaultUiZoneRect();
+        DesktopOverlaySettings.ApplyFixedReferenceRectOnScreen(canvasRect, uiZoneRect);
+
         var panelRect = panelRoot.GetComponent<RectTransform>();
         if (panelRect == null)
             return;
 
-        var uiZoneRect = DesktopOverlaySettings.GetDefaultUiZoneRect();
-        var refWidth = DesktopOverlaySettings.ReferenceWidth;
-        var refHeight = DesktopOverlaySettings.ReferenceHeight;
-        panelRect.anchorMin = new Vector2(uiZoneRect.x / refWidth, uiZoneRect.y / refHeight);
-        panelRect.anchorMax = new Vector2(
-            (uiZoneRect.x + uiZoneRect.width) / refWidth,
-            (uiZoneRect.y + uiZoneRect.height) / refHeight);
-        panelRect.anchoredPosition = Vector2.zero;
-        panelRect.sizeDelta = Vector2.zero;
+        panelRect.anchorMin = Vector2.zero;
+        panelRect.anchorMax = Vector2.one;
         panelRect.offsetMin = new Vector2(12f, 12f);
         panelRect.offsetMax = new Vector2(-12f, -12f);
 
         var canvasScaler = GetComponent<CanvasScaler>();
         if (canvasScaler != null)
         {
-            canvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            canvasScaler.uiScaleMode = DesktopOverlaySettings.UseFixedPanelLayout
+                ? CanvasScaler.ScaleMode.ConstantPixelSize
+                : CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            canvasScaler.scaleFactor = 1f;
             canvasScaler.referenceResolution = DesktopOverlaySettings.WindowSize;
             canvasScaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
             canvasScaler.matchWidthOrHeight = 1f;

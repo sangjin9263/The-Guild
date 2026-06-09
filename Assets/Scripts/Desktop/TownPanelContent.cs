@@ -6,7 +6,9 @@ public class TownPanelContent : PanelWorldContent
     [SerializeField] private Tilemap groundTilemap;
     [SerializeField] private Transform propsRoot;
     [SerializeField] private Transform portalRoot;
+    [Tooltip("Default for new portals in editor setup. Move Portal in the Scene to place it.")]
     [SerializeField] private float portalOffsetX = 26f;
+    [Tooltip("Default for new portals in editor setup. Move Portal in the Scene to place it.")]
     [SerializeField] private float portalOffsetY = -3f;
 
     public Tilemap GroundTilemap => groundTilemap;
@@ -17,16 +19,17 @@ public class TownPanelContent : PanelWorldContent
         Camera camera,
         bool editorPreview = false)
     {
-        var center3 = RectCenterToWorld(rect, camera);
-        var scale = editorPreview ? 1f : GetWorldScale(rect, scaleReferenceHeight, camera);
-        ApplyContentRootLayout(
-            center3,
-            scale,
+        var designSize = new Vector2(
+            DesktopOverlaySettings.TownPanelWidth,
+            DesktopOverlaySettings.TownPanelHeight);
+
+        ApplyPanelWorldLayout(
+            rect,
+            camera,
+            designSize,
+            editorPreview,
             groundTilemap,
             propsRoot,
-            portalRoot,
-            null,
-            portalOffsetX,
-            portalOffsetY);
+            portalRoot);
     }
 }

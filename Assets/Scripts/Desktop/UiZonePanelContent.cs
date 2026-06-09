@@ -13,37 +13,28 @@ public class UiZonePanelContent : MonoBehaviour
 
     public void ApplyLayout(WorkspacePanelRect rect)
     {
+        if (backgroundImage != null)
+        {
+            var backgroundRect = backgroundImage.rectTransform;
+            backgroundRect.anchorMin = Vector2.zero;
+            backgroundRect.anchorMax = Vector2.one;
+            backgroundRect.offsetMin = Vector2.zero;
+            backgroundRect.offsetMax = Vector2.zero;
+        }
+
         if (uiCanvas != null)
         {
             var canvasRect = uiCanvas.GetComponent<RectTransform>();
             if (canvasRect != null)
-                ApplyRectToTransform(canvasRect, rect, Vector2.zero);
+                DesktopOverlaySettings.ApplyFixedReferenceRectOnScreen(canvasRect, rect);
         }
 
         if (panelRoot != null)
-            ApplyRectToTransform(panelRoot, rect, padding);
-
-        if (backgroundImage != null)
         {
-            var backgroundRect = backgroundImage.rectTransform;
-            ApplyRectToTransform(backgroundRect, rect, Vector2.zero);
+            panelRoot.anchorMin = Vector2.zero;
+            panelRoot.anchorMax = Vector2.one;
+            panelRoot.offsetMin = padding;
+            panelRoot.offsetMax = -padding;
         }
-    }
-
-    private static void ApplyRectToTransform(
-        RectTransform rectTransform,
-        WorkspacePanelRect rect,
-        Vector2 inset)
-    {
-        var refWidth = DesktopOverlaySettings.ReferenceWidth;
-        var refHeight = DesktopOverlaySettings.ReferenceHeight;
-        rectTransform.anchorMin = new Vector2(rect.x / refWidth, rect.y / refHeight);
-        rectTransform.anchorMax = new Vector2(
-            (rect.x + rect.width) / refWidth,
-            (rect.y + rect.height) / refHeight);
-        rectTransform.anchoredPosition = Vector2.zero;
-        rectTransform.sizeDelta = Vector2.zero;
-        rectTransform.offsetMin = new Vector2(inset.x, inset.y);
-        rectTransform.offsetMax = new Vector2(-inset.x, -inset.y);
     }
 }

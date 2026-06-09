@@ -6,12 +6,16 @@ public enum AutoCombatTeam
     Enemy
 }
 
+/// <summary>
+/// 자동 전투 유닛 — 소속 BattleArena 안 적만 찾아 이동·공격합니다.
+/// </summary>
 [DisallowMultipleComponent]
 public class AutoCombatUnit : MonoBehaviour
 {
     [SerializeField] private AutoCombatTeam team;
     [SerializeField] private AutoCombatStats stats = AutoCombatStats.Default;
 
+    private BattleArena arena;
     private float health;
     private float attackTimer;
     private float groundY;
@@ -23,13 +27,15 @@ public class AutoCombatUnit : MonoBehaviour
     public float Health => health;
     public float MaxHealth => stats.maxHealth;
 
-    public void Configure(AutoCombatTeam unitTeam, AutoCombatStats unitStats)
+    public void Configure(AutoCombatTeam unitTeam, AutoCombatStats unitStats, BattleArena ownerArena)
     {
         team = unitTeam;
         stats = unitStats;
+        arena = ownerArena;
         health = stats.maxHealth;
         attackTimer = Random.Range(0f, stats.attackInterval * 0.5f);
         groundY = transform.position.y;
+        arena?.RegisterUnit(this);
         ApplyTeamColor();
     }
 
@@ -41,6 +47,11 @@ public class AutoCombatUnit : MonoBehaviour
         groundY = transform.position.y;
         EnsureVisual();
         ApplyTeamColor();
+    }
+
+    private void OnDestroy()
+    {
+        arena?.UnregisterUnit(this);
     }
 
     private void Update()
@@ -96,9 +107,13 @@ public class AutoCombatUnit : MonoBehaviour
         AutoCombatUnit nearest = null;
         var bestDistance = float.MaxValue;
 
-        foreach (var unit in FindObjectsByType<AutoCombatUnit>(FindObjectsSortMode.None))
+        // arena가 없으면 적을 찾지 않아 전역 검색을 피합니다.
+        if (arena == null)
+            return null;
+
+        foreach (var unit in arena.Units)
         {
-            if (unit == this || !unit.IsAlive || unit.team == team)
+            if (unit == this || unit == null || !unit.IsAlive || unit.team == team)
                 continue;
 
             var distance = Mathf.Abs(transform.position.x - unit.transform.position.x);
@@ -114,7 +129,7 @@ public class AutoCombatUnit : MonoBehaviour
 
     private void SnapToGround()
     {
-        var tilemap = CombatGroundQuery.ResolveCombatGround();
+        var tilemap = arena != null ? arena.GetGroundTilemap() : CombatGroundQuery.ResolveCombatGround();
         if (tilemap != null &&
             CombatGroundQuery.TryGetSurfaceYAtWorldX(tilemap, transform.position.x, out var surfaceY))
         {

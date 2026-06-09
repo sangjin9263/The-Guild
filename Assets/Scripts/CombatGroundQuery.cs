@@ -1,10 +1,14 @@
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
+/// <summary>
+/// 전투 바닥 타일맵을 찾고, 월드 X 좌표에 맞는 지면 Y를 계산합니다.
+/// </summary>
 public static class CombatGroundQuery
 {
     public static Tilemap ResolveCombatGround()
     {
+        // WorkspaceLayoutController가 지정한 주 던전(아래 슬롯, 표시 이름 「던전 1」) 바닥을 우선 사용합니다.
         if (WorkspaceLayoutController.Instance != null)
         {
             var tilemap = WorkspaceLayoutController.Instance.CombatGround;
@@ -12,20 +16,7 @@ public static class CombatGroundQuery
                 return tilemap;
         }
 
-        var dungeon3 = GameObject.Find("Dungeon3Content");
-        if (dungeon3 != null)
-        {
-            var content = dungeon3.GetComponent<DungeonPanelContent>();
-            if (content != null && content.GroundTilemap != null)
-                return content.GroundTilemap;
-        }
-
-        var combatObject = GameObject.Find("Combat_Ground");
-        if (combatObject != null)
-            return combatObject.GetComponent<Tilemap>();
-
-        var legacyGround = GameObject.Find("Dungeon3Content/Grid/Ground");
-        return legacyGround != null ? legacyGround.GetComponent<Tilemap>() : null;
+        return null;
     }
 
     public static bool TryGetSurfaceWorldPosition(Tilemap tilemap, int cellX, out Vector2 position)

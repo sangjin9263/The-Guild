@@ -28,6 +28,25 @@ public static class WorkspaceLayoutSetup
         Debug.Log("Independent workspace panels applied.");
     }
 
+    [MenuItem("The Guild/Layout/Remove Duplicate Workspace Panels")]
+    public static void RemoveDuplicateWorkspacePanelsInScene()
+    {
+        var workspace = GameObject.Find("GameWorkspace")?.transform;
+        var layoutRoot = workspace != null ? workspace.Find("LayoutRoot") : null;
+        if (workspace == null || layoutRoot == null)
+        {
+            Debug.LogWarning("GameWorkspace or LayoutRoot not found.");
+            return;
+        }
+
+        var removed = WorkspaceLayoutController.RemoveDuplicateWorkspacePanels(workspace, layoutRoot);
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        SceneView.RepaintAll();
+        Debug.Log(removed > 0
+            ? $"Removed {removed} duplicate workspace panel(s). Save the scene (Ctrl+S)."
+            : "No duplicate workspace panels found.");
+    }
+
     [MenuItem("The Guild/Layout/Reset Workspace Panel Positions")]
     public static void ResetWorkspacePanelPositions()
     {
@@ -47,6 +66,11 @@ public static class WorkspaceLayoutSetup
         }
         else
         {
+            var workspace = GameObject.Find("GameWorkspace")?.GetComponent<RectTransform>();
+            var layoutRoot = workspace != null ? workspace.Find("LayoutRoot") as RectTransform : null;
+            if (layoutRoot != null)
+                DesktopOverlaySettings.ApplyLayoutRootTransform(layoutRoot);
+
             foreach (var panel in Object.FindObjectsByType<WorkspacePanel>(
                          FindObjectsInactive.Include,
                          FindObjectsSortMode.None))
@@ -71,9 +95,9 @@ public static class WorkspaceLayoutSetup
         var panelContentsRoot = EnsureRoot("PanelContents");
         var townContent = EnsureTownContent(panelContentsRoot.transform);
         var uiContent = EnsureUiContent(panelContentsRoot.transform);
-        var dungeon1Content = EnsureDungeonContent(panelContentsRoot.transform, 0, "Dungeon1Content", "Dungeon 1");
-        var dungeon2Content = EnsureDungeonContent(panelContentsRoot.transform, 1, "Dungeon2Content", "Dungeon 2");
-        var dungeon3Content = EnsureDungeonContent(panelContentsRoot.transform, 2, "Dungeon3Content", "Dungeon 3");
+        var dungeon1Content = EnsureDungeonContent(panelContentsRoot.transform, 0, "Dungeon1Content", DesktopOverlaySettings.GetDungeonDisplayName(0));
+        var dungeon2Content = EnsureDungeonContent(panelContentsRoot.transform, 1, "Dungeon2Content", DesktopOverlaySettings.GetDungeonDisplayName(1));
+        var dungeon3Content = EnsureDungeonContent(panelContentsRoot.transform, 2, "Dungeon3Content", DesktopOverlaySettings.GetDungeonDisplayName(2));
 
         MigrateLegacyWorldContent(townContent, dungeon3Content);
 
@@ -88,7 +112,11 @@ public static class WorkspaceLayoutSetup
         WireUiZoneContent(uiContent);
         HideLockedDungeonPanels();
         CleanupLegacyHierarchy();
+        CleanupDuplicateBuildingUiCanvas();
+        NormalizeAllDungeonBattleRoots();
     }
+
+    private const int PrimaryCombatSlotIndex = 2;
 
     private static void EnsureEventSystem()
     {
@@ -109,8 +137,8 @@ public static class WorkspaceLayoutSetup
         if (bootstrapObject.GetComponent<DesktopOverlayBootstrap>() == null)
             bootstrapObject.AddComponent<DesktopOverlayBootstrap>();
 
-        if (bootstrapObject.GetComponent<DungeonUnlockManager>() == null)
-            bootstrapObject.AddComponent<DungeonUnlockManager>();
+        if (bootstrapObject.GetComponent<GameManager>() == null)
+            bootstrapObject.AddComponent<GameManager>();
 
         GameObjectUtility.RemoveMonoBehavioursWithMissingScript(bootstrapObject);
     }
@@ -140,9 +168,7 @@ public static class WorkspaceLayoutSetup
 
         var ground = ZoneLayoutSetup.EnsureTilemapUnder(grid.transform, "Ground");
         var props = EnsureChildObject(contentObject.transform, "Props").transform;
-        var portals = EnsureChildObject(contentObject.transform, "Portals").transform;
-        var villagePortal = EnsureChildObject(portals, "VillagePortal").transform;
-        PortalVisualSetup.EnsurePortalVisual(villagePortal);
+        var villagePortal = PortalVisualSetup.ResolveTownPortal(contentObject.transform);
 
         WireTownContent(content, ground, props, villagePortal);
         return content;
@@ -177,16 +203,79 @@ public static class WorkspaceLayoutSetup
 
         var ground = ZoneLayoutSetup.EnsureTilemapUnder(grid.transform, "Ground");
         var props = EnsureChildObject(contentObject.transform, "Props").transform;
-        var portals = EnsureChildObject(contentObject.transform, "Portals").transform;
-        var portal = EnsureChildObject(portals, "Portal").transform;
-        PortalVisualSetup.EnsurePortalVisual(portal);
-        var battle = EnsureChildObject(contentObject.transform, "Battle").transform;
-
-        if (battle.GetComponent<BattleArena>() == null)
-            battle.gameObject.AddComponent<BattleArena>();
+        var portal = PortalVisualSetup.ResolveDungeonPortal(contentObject.transform);
+        var battle = NormalizeBattleRoot(contentObject.transform, slotIndex);
 
         WireDungeonContent(content, slotIndex, displayName, ground, props, portal, battle);
         return content;
+    }
+
+    private static Transform NormalizeBattleRoot(Transform contentRoot, int slotIndex)
+    {
+        Transform canonicalBattle = null;
+        var duplicateBattles = new System.Collections.Generic.List<Transform>();
+
+        for (var i = 0; i < contentRoot.childCount; i++)
+        {
+            var child = contentRoot.GetChild(i);
+            if (child.name != "Battle")
+                continue;
+
+            if (canonicalBattle == null)
+                canonicalBattle = child;
+            else
+                duplicateBattles.Add(child);
+        }
+
+        if (canonicalBattle == null)
+            canonicalBattle = EnsureChildObject(contentRoot, "Battle").transform;
+
+        foreach (var duplicate in duplicateBattles)
+        {
+            while (duplicate.childCount > 0)
+                duplicate.GetChild(0).SetParent(canonicalBattle, false);
+
+            Object.DestroyImmediate(duplicate.gameObject);
+        }
+
+        ConfigureBattleComponents(canonicalBattle.gameObject, slotIndex == PrimaryCombatSlotIndex);
+        return canonicalBattle;
+    }
+
+    private static void ConfigureBattleComponents(GameObject battleObject, bool isPrimaryCombatSlot)
+    {
+        var arena = battleObject.GetComponent<BattleArena>();
+        var controller = battleObject.GetComponent<BattleController>();
+
+        if (isPrimaryCombatSlot)
+        {
+            if (arena == null)
+                arena = battleObject.AddComponent<BattleArena>();
+
+            if (controller == null)
+                controller = battleObject.AddComponent<BattleController>();
+
+            var serializedController = new SerializedObject(controller);
+            serializedController.FindProperty("arena").objectReferenceValue = arena;
+            serializedController.ApplyModifiedPropertiesWithoutUndo();
+            return;
+        }
+
+        if (arena != null)
+            Object.DestroyImmediate(arena);
+
+        if (controller != null)
+            Object.DestroyImmediate(controller);
+    }
+
+    private static void NormalizeAllDungeonBattleRoots()
+    {
+        foreach (var content in Object.FindObjectsByType<DungeonPanelContent>(
+                     FindObjectsInactive.Include,
+                     FindObjectsSortMode.None))
+        {
+            NormalizeBattleRoot(content.transform, content.SlotIndex);
+        }
     }
 
     private static void MigrateLegacyWorldContent(
@@ -200,7 +289,7 @@ public static class WorkspaceLayoutSetup
         ReparentIfFound("Combat_Ground", dungeon3Content.transform, "Grid/Ground");
         ReparentIfFound("Combat_Props", dungeon3Content.transform, "Props");
         ReparentIfFound("Portals/BattlePortal", dungeon3Content.transform, "Portals/Portal");
-        ReparentIfFound("Battle", dungeon3Content.transform, "Battle");
+        // 레거시 Battle은 Dungeon3 아래로 옮긴 뒤 NormalizeAllDungeonBattleRoots에서 하나로 합칩니다.
 
         var townGround = townContent.transform.Find("Grid/Ground")?.GetComponent<Tilemap>();
         if (townGround != null && !ZoneLayoutSetup.HasPaintedTiles(townGround))
@@ -214,16 +303,18 @@ public static class WorkspaceLayoutSetup
             townContent,
             townGround,
             townContent.transform.Find("Props"),
-            townContent.transform.Find("Portals/VillagePortal"));
+            PortalVisualSetup.ResolveTownPortal(townContent.transform));
 
         WireDungeonContent(
             dungeon3Content,
             2,
-            "Dungeon 3",
+            DesktopOverlaySettings.GetDungeonDisplayName(2),
             dungeon3Ground,
             dungeon3Content.transform.Find("Props"),
-            dungeon3Content.transform.Find("Portals/Portal"),
-            dungeon3Content.transform.Find("Battle"));
+            PortalVisualSetup.ResolveDungeonPortal(dungeon3Content.transform),
+            NormalizeBattleRoot(dungeon3Content.transform, PrimaryCombatSlotIndex));
+
+        PortalVisualSetup.NormalizeAllPanelPortals();
     }
 
     private static void ReparentIfFound(string path, Transform newRoot, string newPath)
@@ -259,6 +350,8 @@ public static class WorkspaceLayoutSetup
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 50;
 
+        DesktopOverlaySettings.ApplyFullScreenOverlayRoot(workspaceObject.GetComponent<RectTransform>());
+
         if (workspaceObject.GetComponent<CanvasScaler>() == null)
             workspaceObject.AddComponent<CanvasScaler>();
 
@@ -276,8 +369,10 @@ public static class WorkspaceLayoutSetup
         serializedController.FindProperty("primaryCombatSlotIndex").intValue = 2;
         serializedController.ApplyModifiedPropertiesWithoutUndo();
 
+        var layoutRoot = EnsureLayoutRoot(workspaceObject.transform);
+
         EnsurePanel(
-            workspaceObject.transform,
+            layoutRoot,
             WorkspacePanelId.Town,
             "TownPanel",
             "마을",
@@ -288,7 +383,7 @@ public static class WorkspaceLayoutSetup
             null);
 
         EnsurePanel(
-            workspaceObject.transform,
+            layoutRoot,
             WorkspacePanelId.UiZone,
             "UiZonePanel",
             "UI",
@@ -299,10 +394,10 @@ public static class WorkspaceLayoutSetup
             uiContent);
 
         EnsurePanel(
-            workspaceObject.transform,
+            layoutRoot,
             WorkspacePanelId.DungeonSlot1,
             "DungeonPanel_1",
-            "던전 1",
+            DesktopOverlaySettings.GetDungeonDisplayLabel(0),
             DesktopOverlaySettings.GetDefaultDungeonRectForSlot(0),
             DesktopOverlaySettings.DungeonSlotHeight,
             new Color(0.35f, 0.55f, 0.95f, 0.35f),
@@ -310,10 +405,10 @@ public static class WorkspaceLayoutSetup
             null);
 
         EnsurePanel(
-            workspaceObject.transform,
+            layoutRoot,
             WorkspacePanelId.DungeonSlot2,
             "DungeonPanel_2",
-            "던전 2",
+            DesktopOverlaySettings.GetDungeonDisplayLabel(1),
             DesktopOverlaySettings.GetDefaultDungeonRectForSlot(1),
             DesktopOverlaySettings.DungeonSlotHeight,
             new Color(0.35f, 0.55f, 0.95f, 0.35f),
@@ -321,15 +416,30 @@ public static class WorkspaceLayoutSetup
             null);
 
         EnsurePanel(
-            workspaceObject.transform,
+            layoutRoot,
             WorkspacePanelId.DungeonSlot3,
             "DungeonPanel_3",
-            "던전 3",
+            DesktopOverlaySettings.GetDungeonDisplayLabel(2),
             DesktopOverlaySettings.GetDefaultDungeonRectForSlot(2),
             DesktopOverlaySettings.DungeonSlotHeight,
             new Color(0.35f, 0.55f, 0.95f, 0.35f),
             dungeon3Content.transform,
             null);
+    }
+
+    private static Transform EnsureLayoutRoot(Transform workspaceTransform)
+    {
+        var layoutTransform = workspaceTransform.Find("LayoutRoot");
+        if (layoutTransform == null)
+        {
+            var layoutObject = new GameObject("LayoutRoot", typeof(RectTransform));
+            layoutObject.transform.SetParent(workspaceTransform, false);
+            layoutTransform = layoutObject.transform;
+        }
+
+        var layoutRoot = layoutTransform.GetComponent<RectTransform>();
+        DesktopOverlaySettings.ApplyLayoutRootTransform(layoutRoot);
+        return layoutRoot;
     }
 
     private static void EnsurePanel(
@@ -452,15 +562,57 @@ public static class WorkspaceLayoutSetup
 
     private static void HideLockedDungeonPanels()
     {
+        var unlockedSlotCount = ResolveUnlockedSlotCountForEditor();
+
         foreach (var panel in Object.FindObjectsByType<WorkspacePanel>(FindObjectsSortMode.None))
         {
             if (panel.DungeonContent == null)
                 continue;
 
-            var unlocked = panel.DungeonContent.SlotIndex == 2;
+            var slotIndex = panel.DungeonContent.SlotIndex;
+            var unlocked = GameManager.IsSlotUnlockedForCount(slotIndex, unlockedSlotCount);
             panel.gameObject.SetActive(unlocked);
             panel.SetContentVisible(unlocked);
-            panel.DungeonContent.SetVisible(unlocked);
+        }
+    }
+
+    private static int ResolveUnlockedSlotCountForEditor()
+    {
+        var gameManager = Object.FindFirstObjectByType<GameManager>();
+        if (gameManager == null)
+            return 1;
+
+        var serialized = new SerializedObject(gameManager);
+        return serialized.FindProperty("unlockedSlotCount").intValue;
+    }
+
+    private static void CleanupDuplicateBuildingUiCanvas()
+    {
+        var controllers = Object.FindObjectsByType<BuildingPanelUI>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        if (controllers.Length <= 1)
+            return;
+
+        BuildingPanelUI keep = null;
+        foreach (var controller in controllers)
+        {
+            if (controller.gameObject.activeInHierarchy)
+            {
+                keep = controller;
+                break;
+            }
+        }
+
+        keep ??= controllers[0];
+
+        foreach (var controller in controllers)
+        {
+            if (controller == keep)
+                continue;
+
+            Object.DestroyImmediate(controller.gameObject);
         }
     }
 
@@ -480,6 +632,18 @@ public static class WorkspaceLayoutSetup
             if (legacyPanel != null)
                 Object.DestroyImmediate(legacyPanel.gameObject);
         }
+
+        CleanupDuplicateWorkspacePanels();
+    }
+
+    private static void CleanupDuplicateWorkspacePanels()
+    {
+        var workspace = GameObject.Find("GameWorkspace")?.transform;
+        var layoutRoot = workspace != null ? workspace.Find("LayoutRoot") : null;
+        if (workspace == null || layoutRoot == null)
+            return;
+
+        WorkspaceLayoutController.RemoveDuplicateWorkspacePanels(workspace, layoutRoot);
     }
 
     private static void RemoveIfEmptyRoot(string name)

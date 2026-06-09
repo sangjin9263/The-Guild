@@ -18,14 +18,19 @@ public class WorkspaceLayoutController : MonoBehaviour
 
     [SerializeField] private Camera targetCamera;
     [SerializeField] private RectTransform workspaceRoot;
+    [SerializeField] private RectTransform layoutRoot;
     [SerializeField] private Canvas workspaceCanvas;
     [SerializeField] private int primaryCombatSlotIndex = 2;
 
     private readonly Dictionary<string, WorkspacePanel> panels = new();
     private bool layoutDirty = true;
     private bool editorPreviewMode;
+    private Vector2Int lastScreenSize;
 
+    public int PrimaryCombatSlotIndex => primaryCombatSlotIndex;
     public Tilemap CombatGround => ResolvePrimaryDungeonContent()?.GroundTilemap;
+
+    public bool IsPrimaryCombatSlot(int slotIndex) => slotIndex == primaryCombatSlotIndex;
 
     private void Awake()
     {
@@ -38,14 +43,14 @@ public class WorkspaceLayoutController : MonoBehaviour
     private void OnEnable()
     {
         DesktopOverlayBootstrap.WindowReady += HandleWindowReady;
-        DungeonUnlockManager.UnlocksChanged += HandleUnlocksChanged;
+        GameManager.StateChanged += HandleGameStateChanged;
         WorkspacePanel.RectChanged += OnPanelRectSaved;
     }
 
     private void OnDisable()
     {
         DesktopOverlayBootstrap.WindowReady -= HandleWindowReady;
-        DungeonUnlockManager.UnlocksChanged -= HandleUnlocksChanged;
+        GameManager.StateChanged -= HandleGameStateChanged;
         WorkspacePanel.RectChanged -= OnPanelRectSaved;
     }
 
@@ -56,6 +61,14 @@ public class WorkspaceLayoutController : MonoBehaviour
 
     private void LateUpdate()
     {
+        var screenSize = new Vector2Int(Screen.width, Screen.height);
+        if (screenSize.x > 0 && screenSize.y > 0 && screenSize != lastScreenSize)
+        {
+            lastScreenSize = screenSize;
+            if (IsApplied)
+                layoutDirty = true;
+        }
+
         if (!layoutDirty)
             return;
 
@@ -155,7 +168,7 @@ public class WorkspaceLayoutController : MonoBehaviour
         StartCoroutine(ApplyWhenReady());
     }
 
-    private void HandleUnlocksChanged()
+    private void HandleGameStateChanged()
     {
         UpdateDungeonPanelVisibility();
         layoutDirty = true;
@@ -197,7 +210,101 @@ public class WorkspaceLayoutController : MonoBehaviour
         if (workspaceRoot == null)
             workspaceRoot = GameObject.Find("GameWorkspace")?.GetComponent<RectTransform>();
 
+        EnsureLayoutRoot();
         CachePanels();
+    }
+
+    private void EnsureLayoutRoot()
+    {
+        if (workspaceRoot == null)
+            return;
+
+        if (layoutRoot == null)
+        {
+            var existing = workspaceRoot.Find("LayoutRoot");
+            if (existing != null)
+                layoutRoot = existing as RectTransform;
+        }
+
+        if (layoutRoot == null)
+        {
+            var layoutObject = new GameObject("LayoutRoot", typeof(RectTransform));
+            layoutObject.transform.SetParent(workspaceRoot, false);
+            layoutRoot = layoutObject.GetComponent<RectTransform>();
+        }
+
+        DesktopOverlaySettings.ApplyFullScreenOverlayRoot(workspaceRoot);
+        DesktopOverlaySettings.ApplyLayoutRootTransform(layoutRoot);
+
+        RemoveDuplicateWorkspacePanels(workspaceRoot, layoutRoot);
+
+        foreach (var panel in workspaceRoot.GetComponentsInChildren<WorkspacePanel>(true))
+        {
+            if (panel.transform.parent == layoutRoot)
+                continue;
+
+            panel.transform.SetParent(layoutRoot, false);
+        }
+
+        RemoveDuplicateWorkspacePanels(workspaceRoot, layoutRoot);
+    }
+
+    /// <summary>
+    /// Removes duplicate WorkspacePanel objects that share a panelId.
+    /// Prefers the instance parented under LayoutRoot (canonical fixed-layout panels).
+    /// </summary>
+    public static int RemoveDuplicateWorkspacePanels(Transform workspaceRoot, Transform layoutRoot)
+    {
+        if (workspaceRoot == null || layoutRoot == null)
+            return 0;
+
+        var panels = workspaceRoot.GetComponentsInChildren<WorkspacePanel>(true);
+        var byId = new Dictionary<string, List<WorkspacePanel>>();
+
+        foreach (var panel in panels)
+        {
+            if (!byId.TryGetValue(panel.PanelId, out var list))
+            {
+                list = new List<WorkspacePanel>();
+                byId[panel.PanelId] = list;
+            }
+
+            list.Add(panel);
+        }
+
+        var removed = 0;
+        foreach (var list in byId.Values)
+        {
+            if (list.Count <= 1)
+                continue;
+
+            WorkspacePanel keep = null;
+            foreach (var panel in list)
+            {
+                if (panel.transform.parent == layoutRoot)
+                {
+                    keep = panel;
+                    break;
+                }
+            }
+
+            keep ??= list[0];
+
+            foreach (var panel in list)
+            {
+                if (panel == keep)
+                    continue;
+
+                if (Application.isPlaying)
+                    Destroy(panel.gameObject);
+                else
+                    DestroyImmediate(panel.gameObject);
+
+                removed++;
+            }
+        }
+
+        return removed;
     }
 
     private void CachePanels()
@@ -222,10 +329,16 @@ public class WorkspaceLayoutController : MonoBehaviour
         if (scaler == null)
             scaler = workspaceCanvas.gameObject.AddComponent<CanvasScaler>();
 
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.uiScaleMode = DesktopOverlaySettings.UseFixedPanelLayout
+            ? CanvasScaler.ScaleMode.ConstantPixelSize
+            : CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.scaleFactor = 1f;
         scaler.referenceResolution = DesktopOverlaySettings.WindowSize;
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 1f;
+
+        if (workspaceRoot != null)
+            DesktopOverlaySettings.ApplyFullScreenOverlayRoot(workspaceRoot);
     }
 
     private void ApplySavedOrDefaultPanelRects()
@@ -255,7 +368,7 @@ public class WorkspaceLayoutController : MonoBehaviour
                 WorkspacePanelLayoutStore.Save(panel.PanelId, rect);
             }
 
-            placedRects.Add((panel, rect));
+            placedRects.Add((panel, panel.ReferenceRect));
         }
     }
 
@@ -296,14 +409,11 @@ public class WorkspaceLayoutController : MonoBehaviour
             if (!panels.TryGetValue(panelId, out var panel))
                 continue;
 
-            var unlocked = DungeonUnlockManager.Instance == null
-                || DungeonUnlockManager.Instance.IsSlotUnlocked(slotIndex);
+            var unlocked = GameManager.Instance == null
+                ? GameManager.IsSlotUnlockedForCount(slotIndex, 1)
+                : GameManager.Instance.IsSlotUnlocked(slotIndex);
             panel.gameObject.SetActive(unlocked);
             panel.SetContentVisible(unlocked);
-
-            var dungeonContent = panel.DungeonContent;
-            if (dungeonContent != null)
-                dungeonContent.SetVisible(unlocked);
         }
     }
 
@@ -313,8 +423,18 @@ public class WorkspaceLayoutController : MonoBehaviour
         if (workspaceRoot == null)
             return;
 
+        EnsureLayoutRoot();
+
         var camera = targetCamera ?? Camera.main;
-        SideViewCamera.Apply(camera, CombatGround);
+        SideViewCamera.Apply(camera);
+
+        foreach (var panel in panels.Values)
+        {
+            if (panel != null && panel.gameObject.activeInHierarchy)
+                panel.ApplyReferenceRect(panel.ReferenceRect);
+        }
+
+        ResolveActivePanelOverlaps();
 
         foreach (var panel in panels.Values)
             ApplyPanelLayout(panel, camera);

@@ -2,6 +2,9 @@ using System;
 using System.Collections;
 using Kirurobo;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 [DisallowMultipleComponent]
 [DefaultExecutionOrder(100)]
@@ -141,12 +144,13 @@ public class DesktopOverlayBootstrap : MonoBehaviour
         }
 
         ApplyCameraScale();
+        WorkspaceLayoutController.Instance?.RefreshLayout();
         WindowReady?.Invoke();
     }
 
     private static void ApplyCameraScale()
     {
-        SideViewCamera.Apply(Camera.main, CombatGroundQuery.ResolveCombatGround());
+        SideViewCamera.Apply(Camera.main);
     }
 
     private void ApplyOverlaySettings(Vector2 size)
@@ -195,9 +199,25 @@ public class DesktopOverlayBootstrap : MonoBehaviour
     public static float GetLayoutWidth()
     {
 #if UNITY_EDITOR
+        // 에디터: Game 뷰 크기 = 레이아웃 좌표계 (모니터 3440 vs Game 뷰 1920 불일치 방지)
         if (Application.isPlaying && Screen.width > 0)
             return Screen.width;
+
+        if (!Application.isPlaying)
+        {
+            var gameView = Handles.GetMainGameViewSize();
+            if (gameView.x > 0f)
+                return gameView.x;
+        }
 #endif
+        if (Application.isPlaying)
+        {
+            if (TargetWindowWidth > 0f)
+                return TargetWindowWidth;
+            if (Screen.width > 0)
+                return Screen.width;
+        }
+
         return GetDisplayWidth();
     }
 
@@ -206,7 +226,22 @@ public class DesktopOverlayBootstrap : MonoBehaviour
 #if UNITY_EDITOR
         if (Application.isPlaying && Screen.height > 0)
             return Screen.height;
+
+        if (!Application.isPlaying)
+        {
+            var gameView = Handles.GetMainGameViewSize();
+            if (gameView.y > 0f)
+                return gameView.y;
+        }
 #endif
+        if (Application.isPlaying)
+        {
+            if (TargetWindowHeight > 0f)
+                return TargetWindowHeight;
+            if (Screen.height > 0)
+                return Screen.height;
+        }
+
         return GetDisplayHeight();
     }
 

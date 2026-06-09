@@ -56,13 +56,13 @@ public static class WorkspacePanelLayoutGizmo
             "If the brush still does nothing, select your Ground tilemap and set Tile Palette Focus On.");
     }
 
-    [MenuItem("The Guild/Layout/Prepare Dungeon 3 Ground For Painting")]
+    [MenuItem("The Guild/Layout/Prepare Dungeon 1 Ground For Painting")]
     public static void PrepareDungeon3GroundForPainting()
     {
         var tilemap = FindGroundTilemapForPanel(WorkspacePanelId.DungeonSlot3);
         if (tilemap == null)
         {
-            Debug.LogWarning("Dungeon 3 ground tilemap not found.");
+            Debug.LogWarning("Dungeon 1 ground tilemap not found.");
             return;
         }
 
@@ -137,7 +137,7 @@ public static class WorkspacePanelLayoutGizmo
         if (camera == null)
             return;
 
-        SideViewCamera.Apply(camera, CombatGroundQuery.ResolveCombatGround());
+        SideViewCamera.Apply(camera);
 
         var panels = Object.FindObjectsByType<WorkspacePanel>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         foreach (var panel in panels)

@@ -94,16 +94,16 @@ public class WorkspacePanel : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
         if (useSavedLayout && WorkspacePanelLayoutStore.TryLoad(panelId, out var saved))
         {
             return saved.ClampInside(
-                DesktopOverlaySettings.ReferenceWidth,
-                DesktopOverlaySettings.ReferenceHeight);
+                DesktopOverlaySettings.GetLayoutBoundsWidth(),
+                DesktopOverlaySettings.GetLayoutBoundsHeight());
         }
 
         var fromTransform = ReadRectFromTransform();
         if (fromTransform.width > 1f && fromTransform.height > 1f)
         {
             return fromTransform.ClampInside(
-                DesktopOverlaySettings.ReferenceWidth,
-                DesktopOverlaySettings.ReferenceHeight);
+                DesktopOverlaySettings.GetLayoutBoundsWidth(),
+                DesktopOverlaySettings.GetLayoutBoundsHeight());
         }
 
         return GetDefaultRect();
@@ -120,8 +120,8 @@ public class WorkspacePanel : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
     public void ApplyReferenceRect(WorkspacePanelRect rect)
     {
         referenceRect = rect.ClampInside(
-            DesktopOverlaySettings.ReferenceWidth,
-            DesktopOverlaySettings.ReferenceHeight);
+            DesktopOverlaySettings.GetLayoutBoundsWidth(),
+            DesktopOverlaySettings.GetLayoutBoundsHeight());
         ApplyRectToTransform(referenceRect);
     }
 
@@ -178,8 +178,8 @@ public class WorkspacePanel : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
         var controller = WorkspaceLayoutController.Instance;
         var scale = DesktopOverlaySettings.GetReferenceToScreenScale();
         var deltaReference = eventData.delta / scale;
-        var refWidth = DesktopOverlaySettings.ReferenceWidth;
-        var refHeight = DesktopOverlaySettings.ReferenceHeight;
+        var refWidth = DesktopOverlaySettings.GetLayoutBoundsWidth();
+        var refHeight = DesktopOverlaySettings.GetLayoutBoundsHeight();
 
         if (!TryResolveDragRect(deltaReference, refWidth, refHeight, controller, out var nextRect))
             return;
@@ -262,6 +262,9 @@ public class WorkspacePanel : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
         if (rectTransform == null)
             rectTransform = GetComponent<RectTransform>();
 
+        if (DesktopOverlaySettings.UseFixedPanelLayout)
+            return DesktopOverlaySettings.ReadFixedReferenceRect(rectTransform);
+
         var refWidth = DesktopOverlaySettings.ReferenceWidth;
         var refHeight = DesktopOverlaySettings.ReferenceHeight;
         return new WorkspacePanelRect(
@@ -275,6 +278,12 @@ public class WorkspacePanel : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
     {
         if (rectTransform == null)
             rectTransform = GetComponent<RectTransform>();
+
+        if (DesktopOverlaySettings.UseFixedPanelLayout)
+        {
+            DesktopOverlaySettings.ApplyFixedReferenceRect(rectTransform, rect);
+            return;
+        }
 
         var refWidth = DesktopOverlaySettings.ReferenceWidth;
         var refHeight = DesktopOverlaySettings.ReferenceHeight;

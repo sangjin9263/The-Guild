@@ -119,6 +119,37 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &32390928
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 32390929}
+  m_Layer: 0
+  m_Name: Props
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &32390929
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 32390928}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 740711886}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &90632891
 GameObject:
   m_ObjectHideFlags: 0
@@ -416,7 +447,7 @@ PrefabInstance:
     - target: {fileID: 3498913167605284061, guid: 139f244e23916b344a6c3f8af6127e78,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.08
+      value: 0.29
       objectReference: {fileID: 0}
     - target: {fileID: 3498913167605284061, guid: 139f244e23916b344a6c3f8af6127e78,
         type: 3}
@@ -1223,12 +1254,12 @@ PrefabInstance:
     - target: {fileID: 3498913167605284061, guid: 139f244e23916b344a6c3f8af6127e78,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: 0.45
       objectReference: {fileID: 0}
     - target: {fileID: 3498913167605284061, guid: 139f244e23916b344a6c3f8af6127e78,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: -0.05
       objectReference: {fileID: 0}
     - target: {fileID: 3498913167605284061, guid: 139f244e23916b344a6c3f8af6127e78,
         type: 3}
@@ -1286,37 +1317,6 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 716238983}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &736585993
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 736585994}
-  m_Layer: 0
-  m_Name: Props
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &736585994
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 736585993}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1950012560}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &740711885
 GameObject:
   m_ObjectHideFlags: 0
@@ -1343,13 +1343,14 @@ Transform:
   m_GameObject: {fileID: 740711885}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.6666667, y: -14, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: -0.6666665, y: -14.140606, z: 0}
+  m_LocalScale: {x: 0.96484846, y: 0.96484846, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 274183369}
   - {fileID: 1744794913}
   - {fileID: 1373754839}
+  - {fileID: 32390929}
   m_Father: {fileID: 1319920588}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &740711887
@@ -1368,7 +1369,7 @@ MonoBehaviour:
   slotIndex: 2
   displayName: Dungeon 1
   groundTilemap: {fileID: 1475843291}
-  propsRoot: {fileID: 0}
+  propsRoot: {fileID: 32390929}
   portalRoot: {fileID: 1928559044}
   battleRoot: {fileID: 1744794913}
   portalOffsetX: -3
@@ -4512,13 +4513,12 @@ Transform:
   m_GameObject: {fileID: 1950012559}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 21.333334, y: -10, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 20.827938, y: -9.913651, z: 0}
+  m_LocalScale: {x: 1.0107936, y: 1.0107936, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1390414501}
   - {fileID: 1350488160}
-  - {fileID: 736585994}
   m_Father: {fileID: 1319920588}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1950012561
@@ -4535,7 +4535,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TownPanelContent
   contentRoot: {fileID: 0}
   groundTilemap: {fileID: 1190898176}
-  propsRoot: {fileID: 736585994}
+  propsRoot: {fileID: 0}
   portalRoot: {fileID: 213755930}
   portalOffsetX: 26
   portalOffsetY: -3

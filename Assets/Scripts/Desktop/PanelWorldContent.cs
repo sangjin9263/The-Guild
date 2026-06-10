@@ -25,18 +25,6 @@ public abstract class PanelWorldContent : MonoBehaviour
         Transform portalRoot,
         Transform battleRoot = null)
     {
-        if (editorPreview)
-        {
-            ApplyContentRootLayout(
-                RectCenterToWorld(rect, camera),
-                Vector3.one,
-                groundTilemap,
-                propsRoot,
-                portalRoot,
-                battleRoot);
-            return;
-        }
-
         if (TryComputeTilemapPanelFit(
                 rect,
                 groundTilemap,
@@ -65,7 +53,7 @@ public abstract class PanelWorldContent : MonoBehaviour
     }
 
     protected void ApplyContentRootLayout(
-        Vector3 center,
+        Vector3 worldAnchorPosition,
         Vector3 scale,
         Tilemap groundTilemap,
         Transform propsRoot,
@@ -73,22 +61,30 @@ public abstract class PanelWorldContent : MonoBehaviour
         Transform battleRoot)
     {
         var root = ContentRoot;
-        root.position = center;
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+            UnityEditor.Undo.RecordObject(root, "Apply Panel World Layout");
+#endif
+        root.position = worldAnchorPosition;
         root.localScale = scale;
 
         if (groundTilemap != null)
         {
-            if (groundTilemap.transform.parent != null && groundTilemap.transform.parent != root)
-                ResetChildTransform(groundTilemap.transform.parent);
+            var gridTransform = groundTilemap.layoutGrid != null
+                ? groundTilemap.layoutGrid.transform
+                : groundTilemap.transform.parent;
 
-            ResetChildTransform(groundTilemap.transform);
+            if (gridTransform != null && gridTransform != root)
+                ResetChildTransform(gridTransform);
+
+            if (groundTilemap.transform != gridTransform)
+                ResetChildTransform(groundTilemap.transform);
         }
 
-        ResetChildTransform(propsRoot);
-        ResetChildTransform(battleRoot);
-
-        if (portalRoot != null && portalRoot.parent != null && portalRoot.parent != root)
-            ResetChildTransform(portalRoot.parent);
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+            UnityEditor.EditorUtility.SetDirty(root);
+#endif
     }
 
     protected static void ResetChildTransform(Transform child)
@@ -156,20 +152,34 @@ public abstract class PanelWorldContent : MonoBehaviour
         localMax = default;
         localSize = default;
 
+        if (tilemap == null || contentRoot == null)
+            return false;
+
         tilemap.CompressBounds();
-        var bounds = tilemap.cellBounds;
+
+        var rendererBounds = tilemap.localBounds;
+        if (rendererBounds.size.x > 0f && rendererBounds.size.y > 0f)
+        {
+            localMin = LocalPointInContentRoot(tilemap, contentRoot, rendererBounds.min);
+            localMax = LocalPointInContentRoot(tilemap, contentRoot, rendererBounds.max);
+            localSize = localMax - localMin;
+            if (localSize.x > 0f && localSize.y > 0f)
+                return true;
+        }
+
+        var cellBounds = tilemap.cellBounds;
         var hasTiles = false;
         var minX = float.PositiveInfinity;
         var minY = float.PositiveInfinity;
         var maxX = float.NegativeInfinity;
         var maxY = float.NegativeInfinity;
 
-        foreach (var cell in bounds.allPositionsWithin)
+        foreach (var cell in cellBounds.allPositionsWithin)
         {
             if (!tilemap.HasTile(cell))
                 continue;
 
-            var local = contentRoot.InverseTransformPoint(tilemap.GetCellCenterWorld(cell));
+            var local = CellCenterToContentRootLocal(tilemap, contentRoot, cell);
             minX = Mathf.Min(minX, local.x);
             minY = Mathf.Min(minY, local.y);
             maxX = Mathf.Max(maxX, local.x);
@@ -180,11 +190,45 @@ public abstract class PanelWorldContent : MonoBehaviour
         if (!hasTiles)
             return false;
 
-        var halfCell = tilemap.layoutGrid.cellSize * 0.5f;
+        var halfCell = tilemap.layoutGrid != null
+            ? tilemap.layoutGrid.cellSize * 0.5f
+            : Vector3.one * 0.5f;
         localMin = new Vector2(minX - halfCell.x, minY - halfCell.y);
         localMax = new Vector2(maxX + halfCell.x, maxY + halfCell.y);
         localSize = localMax - localMin;
         return localSize.x > 0f && localSize.y > 0f;
+    }
+
+    private static Vector2 LocalPointInContentRoot(
+        Tilemap tilemap,
+        Transform contentRoot,
+        Vector3 pointInTilemapLocal)
+    {
+        var local = pointInTilemapLocal;
+        var current = tilemap.transform;
+        while (current != null && current != contentRoot)
+        {
+            local = current.localPosition + Vector3.Scale(current.localRotation * local, current.localScale);
+            current = current.parent;
+        }
+
+        return (Vector2)local;
+    }
+
+    /// <summary>
+    /// Cell center in content-root local space, independent of the root's current world transform.
+    /// </summary>
+    private static Vector2 CellCenterToContentRootLocal(Tilemap tilemap, Transform contentRoot, Vector3Int cell)
+    {
+        var local = (Vector3)tilemap.GetCellCenterLocal(cell);
+        var current = tilemap.transform;
+        while (current != null && current != contentRoot)
+        {
+            local = current.localPosition + Vector3.Scale(current.localRotation * local, current.localScale);
+            current = current.parent;
+        }
+
+        return (Vector2)local;
     }
 
     /// <summary>

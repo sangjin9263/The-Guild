@@ -8,10 +8,33 @@ using UnityEngine.Tilemaps;
 public static class WorkspacePanelLayoutGizmo
 {
     private static bool showGuides = true;
+    private static double lastSceneLayoutApplyTime;
+    private static int lastSceneLayoutSignature = int.MinValue;
+    private static bool sceneLayoutPending = true;
 
     static WorkspacePanelLayoutGizmo()
     {
         SceneView.duringSceneGui += OnSceneGui;
+        EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+        EditorApplication.delayCall += OnEditorDelayCall;
+    }
+
+    private static void OnEditorDelayCall()
+    {
+        if (Application.isPlaying)
+            return;
+
+        sceneLayoutPending = true;
+        ApplyEditorSceneLayout(force: true);
+    }
+
+    private static void OnPlayModeStateChanged(PlayModeStateChange state)
+    {
+        if (state != PlayModeStateChange.EnteredEditMode)
+            return;
+
+        lastSceneLayoutSignature = 0;
+        sceneLayoutPending = true;
     }
 
     [MenuItem("The Guild/Layout/Toggle Panel Layout Guides")]
@@ -36,14 +59,7 @@ public static class WorkspacePanelLayoutGizmo
             return;
         }
 
-        var controller = Object.FindFirstObjectByType<WorkspaceLayoutController>();
-        if (controller == null)
-        {
-            Debug.LogWarning("WorkspaceLayoutController not found in scene.");
-            return;
-        }
-
-        controller.ApplyEditorPreviewLayout();
+        ApplyEditorSceneLayout(force: true);
 
         var focusTilemap = FindGroundTilemapForPanel(WorkspacePanelId.DungeonSlot3)
             ?? FindGroundTilemapForPanel(WorkspacePanelId.Town);
@@ -52,8 +68,8 @@ public static class WorkspacePanelLayoutGizmo
 
         SceneView.RepaintAll();
         Debug.Log(
-            "Panel layout preview applied. Paint tiles in the Scene view (not Game view). " +
-            "If the brush still does nothing, select your Ground tilemap and set Tile Palette Focus On.");
+            "Panel layout preview applied. Scene tiles now match the Play layout guides. " +
+            "Use Prepare Town/Dungeon Ground For Painting to focus the tile brush.");
     }
 
     [MenuItem("The Guild/Layout/Prepare Dungeon 1 Ground For Painting")]
@@ -128,8 +144,83 @@ public static class WorkspacePanelLayoutGizmo
         return path;
     }
 
+    private static void ApplyEditorSceneLayout(bool force = false)
+    {
+        if (Application.isPlaying)
+            return;
+
+        var signature = ComputeSceneLayoutSignature();
+        if (!force && signature == lastSceneLayoutSignature)
+            return;
+
+        lastSceneLayoutSignature = signature;
+        lastSceneLayoutApplyTime = EditorApplication.timeSinceStartup;
+        sceneLayoutPending = false;
+
+        var camera = DesktopOverlaySettings.ResolveLayoutCamera();
+        if (camera == null)
+            return;
+
+        SideViewCamera.Apply(camera);
+
+        foreach (var panel in Object.FindObjectsByType<WorkspacePanel>(
+                     FindObjectsInactive.Include,
+                     FindObjectsSortMode.None))
+        {
+            if (!panel.gameObject.activeInHierarchy)
+                continue;
+
+            panel.ApplyReferenceRect(panel.GetLayoutRect());
+            panel.ApplyWorldContentLayout(camera, editorPreview: false);
+        }
+    }
+
+    private static int ComputeSceneLayoutSignature()
+    {
+        var hash = 17;
+        hash = hash * 31 + DesktopOverlaySettings.GetLayoutBoundsWidth().GetHashCode();
+        hash = hash * 31 + DesktopOverlaySettings.GetLayoutBoundsHeight().GetHashCode();
+
+        foreach (var panel in Object.FindObjectsByType<WorkspacePanel>(
+                     FindObjectsInactive.Include,
+                     FindObjectsSortMode.None))
+        {
+            if (!panel.gameObject.activeInHierarchy)
+                continue;
+
+            var rect = panel.GetLayoutRect();
+            hash = hash * 31 + rect.x.GetHashCode();
+            hash = hash * 31 + rect.y.GetHashCode();
+            hash = hash * 31 + rect.width.GetHashCode();
+            hash = hash * 31 + rect.height.GetHashCode();
+        }
+
+        return hash;
+    }
+
+    private static void TryRefreshEditorSceneLayout()
+    {
+        if (Application.isPlaying)
+            return;
+
+        var signature = ComputeSceneLayoutSignature();
+        if (signature != lastSceneLayoutSignature)
+            sceneLayoutPending = true;
+
+        if (!sceneLayoutPending)
+            return;
+
+        var elapsed = EditorApplication.timeSinceStartup - lastSceneLayoutApplyTime;
+        if (lastSceneLayoutApplyTime > 0d && elapsed < 0.5d)
+            return;
+
+        ApplyEditorSceneLayout();
+    }
+
     private static void OnSceneGui(SceneView sceneView)
     {
+        TryRefreshEditorSceneLayout();
+
         if (!showGuides)
             return;
 
@@ -166,7 +257,7 @@ public static class WorkspacePanelLayoutGizmo
                 (bottomLeft.x + topRight.x) * 0.5f,
                 (bottomLeft.y + topRight.y) * 0.5f,
                 0f);
-            Handles.Label(labelPosition, $"{panel.Label}\n(Play 위치 가이드)");
+            Handles.Label(labelPosition, $"{panel.Label}\n(패널 가이드)");
 
             Handles.color = previousColor;
         }

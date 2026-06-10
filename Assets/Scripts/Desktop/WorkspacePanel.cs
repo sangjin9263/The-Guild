@@ -132,16 +132,18 @@ public class WorkspacePanel : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
 
         camera ??= DesktopOverlaySettings.ResolveLayoutCamera();
 
+        var layoutRect = GetLayoutRect();
+
         var townContent = TownContent;
         if (townContent != null)
         {
-            townContent.ApplyLayout(referenceRect, worldScaleReferenceHeight, camera, editorPreview);
+            townContent.ApplyLayout(layoutRect, worldScaleReferenceHeight, camera, editorPreview);
             return;
         }
 
         var dungeonContent = DungeonContent;
         if (dungeonContent != null)
-            dungeonContent.ApplyLayout(referenceRect, worldScaleReferenceHeight, camera, editorPreview);
+            dungeonContent.ApplyLayout(layoutRect, worldScaleReferenceHeight, camera, editorPreview);
     }
 
     public void ApplyUiZoneLayout()

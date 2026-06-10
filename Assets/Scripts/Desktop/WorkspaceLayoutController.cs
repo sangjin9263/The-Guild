@@ -109,18 +109,10 @@ public class WorkspaceLayoutController : MonoBehaviour
         if (Application.isPlaying)
             return;
 
-        editorPreviewMode = true;
-        try
-        {
-            ResolveReferences();
-            ApplySavedOrDefaultPanelRects();
-            layoutDirty = true;
-            ApplyLayoutInternal();
-        }
-        finally
-        {
-            editorPreviewMode = false;
-        }
+        ResolveReferences();
+        ApplySavedOrDefaultPanelRects();
+        layoutDirty = true;
+        ApplyLayoutInternal();
 #endif
     }
 

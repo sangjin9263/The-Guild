@@ -51,6 +51,12 @@ Assets/Screenshots/
 # TextMesh Pro sample content (not referenced by game scenes)
 Assets/TextMesh Pro/Examples & Extras/
 
+# Third-party Asset Store packages (import locally; not versioned)
+# Packages: Admurin's Pixel Items, Cainos, Cartoon Coffee, Fantasy Book UI V2,
+# HONETi, Hovl Studio, Lana Studio, Modern UI Pack, Pixel Sprite Effects pack, PixelFantasy
+Assets/Store/
+Assets/Store.meta
+
 # Crash reports
 sysinfo.txt
 

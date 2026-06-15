@@ -35,6 +35,21 @@ Desktop.ini
 # Local downloads / temp (not part of the game project)
 /_Downloads/
 /Tools/node_modules/
+/large-files*.txt
+
+# Large design/source files (keep locally; exported PNG/TTF/SDF assets stay tracked)
+*.psd
+*.psd.meta
+*.ttc
+*.ttc.meta
+*.bdf
+*.bdf.meta
+
+# Local dev captures
+Assets/Screenshots/
+
+# TextMesh Pro sample content (not referenced by game scenes)
+Assets/TextMesh Pro/Examples & Extras/
 
 # Crash reports
 sysinfo.txt

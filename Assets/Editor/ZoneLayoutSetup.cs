@@ -10,7 +10,6 @@ public static class ZoneLayoutSetup
     private const string TilemapUnlitMaterialPath =
         "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat";
 
-    [MenuItem("The Guild/Map/Setup Zone Layout")]
     public static void SetupZoneLayoutInActiveScene()
     {
         ApplyZoneLayout(paintStarterGroundIfEmpty: true);

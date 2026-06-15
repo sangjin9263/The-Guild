@@ -9,7 +9,6 @@ public static class WorkspaceLayoutSetup
 {
     private const string MainScenePath = "Assets/Scenes/Main.unity";
 
-    [MenuItem("The Guild/Layout/Setup Independent Panels In Main")]
     [MenuItem("The Guild/Layout/Setup Workspace In Main")]
     public static void SetupWorkspaceInMain()
     {
@@ -17,34 +16,7 @@ public static class WorkspaceLayoutSetup
         ApplyWorkspaceLayout();
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
-        Debug.Log("Independent workspace panels applied to Main scene.");
-    }
-
-    [MenuItem("The Guild/Layout/Setup Workspace")]
-    public static void SetupWorkspaceInActiveScene()
-    {
-        ApplyWorkspaceLayout();
-        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-        Debug.Log("Independent workspace panels applied.");
-    }
-
-    [MenuItem("The Guild/Layout/Remove Duplicate Workspace Panels")]
-    public static void RemoveDuplicateWorkspacePanelsInScene()
-    {
-        var workspace = GameObject.Find("GameWorkspace")?.transform;
-        var layoutRoot = workspace != null ? workspace.Find("LayoutRoot") : null;
-        if (workspace == null || layoutRoot == null)
-        {
-            Debug.LogWarning("GameWorkspace or LayoutRoot not found.");
-            return;
-        }
-
-        var removed = WorkspaceLayoutController.RemoveDuplicateWorkspacePanels(workspace, layoutRoot);
-        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-        SceneView.RepaintAll();
-        Debug.Log(removed > 0
-            ? $"Removed {removed} duplicate workspace panel(s). Save the scene (Ctrl+S)."
-            : "No duplicate workspace panels found.");
+        Debug.Log("Workspace layout applied to Main scene.");
     }
 
     [MenuItem("The Guild/Layout/Reset Workspace Panel Positions")]
@@ -95,23 +67,29 @@ public static class WorkspaceLayoutSetup
         var panelContentsRoot = EnsureRoot("PanelContents");
         var townContent = EnsureTownContent(panelContentsRoot.transform);
         var uiContent = EnsureUiContent(panelContentsRoot.transform);
+        var auctionContent = EnsureAuctionContent(panelContentsRoot.transform);
         var dungeon1Content = EnsureDungeonContent(panelContentsRoot.transform, 0, "Dungeon1Content", DesktopOverlaySettings.GetDungeonDisplayName(0));
         var dungeon2Content = EnsureDungeonContent(panelContentsRoot.transform, 1, "Dungeon2Content", DesktopOverlaySettings.GetDungeonDisplayName(1));
         var dungeon3Content = EnsureDungeonContent(panelContentsRoot.transform, 2, "Dungeon3Content", DesktopOverlaySettings.GetDungeonDisplayName(2));
+        var dungeon4Content = EnsureDungeonContent(panelContentsRoot.transform, 3, "Dungeon4Content", DesktopOverlaySettings.GetDungeonDisplayName(3));
 
         MigrateLegacyWorldContent(townContent, dungeon3Content);
 
         EnsureWorkspaceCanvas(
             townContent,
             uiContent,
+            auctionContent,
             dungeon1Content,
             dungeon2Content,
-            dungeon3Content);
+            dungeon3Content,
+            dungeon4Content);
 
         BuildingUISetup.EnsureBuildingPanel();
         WireUiZoneContent(uiContent);
+        EnsureAuctionWorkspaceUi(auctionContent);
         HideLockedDungeonPanels();
         CleanupLegacyHierarchy();
+        CleanupLegacyAuctionPanel();
         CleanupDuplicateBuildingUiCanvas();
         NormalizeAllDungeonBattleRoots();
     }
@@ -139,6 +117,9 @@ public static class WorkspaceLayoutSetup
 
         if (bootstrapObject.GetComponent<GameManager>() == null)
             bootstrapObject.AddComponent<GameManager>();
+
+        if (bootstrapObject.GetComponent<GateAuctionManager>() == null)
+            bootstrapObject.AddComponent<GateAuctionManager>();
 
         GameObjectUtility.RemoveMonoBehavioursWithMissingScript(bootstrapObject);
     }
@@ -174,12 +155,120 @@ public static class WorkspaceLayoutSetup
         return content;
     }
 
+    public static void EnsureAuctionWorkspaceUi(AuctionZonePanelContent auctionContent = null)
+    {
+        if (auctionContent == null)
+        {
+            var panelContentsRoot = EnsureRoot("PanelContents");
+            auctionContent = EnsureAuctionContent(panelContentsRoot.transform);
+        }
+
+        var workspace = GameObject.Find("GameWorkspace");
+        if (workspace == null)
+        {
+            Debug.LogWarning("GameWorkspace not found. Run The Guild/Layout/Setup Workspace first.");
+            return;
+        }
+
+        var layoutRoot = workspace.transform.Find("LayoutRoot");
+        if (layoutRoot == null)
+        {
+            Debug.LogWarning("LayoutRoot not found under GameWorkspace.");
+            return;
+        }
+
+        var auctionZonePanel = layoutRoot.Find("AuctionZonePanel");
+        if (auctionZonePanel == null)
+        {
+            EnsurePanel(
+                layoutRoot,
+                WorkspacePanelId.Auction,
+                "AuctionZonePanel",
+                "경매",
+                DesktopOverlaySettings.GetDefaultAuctionRect(),
+                DesktopOverlaySettings.AuctionPanelHeight,
+                new Color(0.85f, 0.65f, 0.15f, 0.35f),
+                null,
+                null,
+                auctionContent);
+            auctionZonePanel = layoutRoot.Find("AuctionZonePanel");
+        }
+
+        if (auctionZonePanel == null)
+        {
+            Debug.LogWarning("AuctionZonePanel could not be created.");
+            return;
+        }
+
+        MigrateLegacyAuctionPanel(auctionZonePanel);
+
+        var panelRoot = FindOrCreateAuctionPanel(auctionZonePanel);
+        var closeButton = panelRoot.transform.Find("CloseButton")?.GetComponent<Button>();
+
+        var controller = workspace.GetComponent<AuctionPanelUI>();
+        if (controller == null)
+            controller = workspace.AddComponent<AuctionPanelUI>();
+
+        var auctionSerialized = new SerializedObject(controller);
+        auctionSerialized.FindProperty("panelRoot").objectReferenceValue = panelRoot;
+        auctionSerialized.FindProperty("titleText").objectReferenceValue =
+            panelRoot.transform.Find("Title")?.GetComponent<Text>();
+        auctionSerialized.FindProperty("bodyText").objectReferenceValue =
+            panelRoot.transform.Find("Body")?.GetComponent<Text>();
+        auctionSerialized.FindProperty("closeButton").objectReferenceValue = closeButton;
+        auctionSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+        ConfigureAuctionPanelRaycasts(panelRoot);
+
+        var contentSerialized = new SerializedObject(auctionContent);
+        contentSerialized.FindProperty("panelRoot").objectReferenceValue = panelRoot.GetComponent<RectTransform>();
+        contentSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+        foreach (var panel in Object.FindObjectsByType<WorkspacePanel>(FindObjectsSortMode.None))
+        {
+            if (panel.PanelId != WorkspacePanelId.Auction)
+                continue;
+
+            var panelSerialized = new SerializedObject(panel);
+            panelSerialized.FindProperty("auctionZoneContent").objectReferenceValue = auctionContent;
+            panelSerialized.ApplyModifiedPropertiesWithoutUndo();
+            panel.gameObject.SetActive(true);
+        }
+
+        ApplyAuctionPanelLayout(panelRoot);
+    }
+
+    private static void ApplyAuctionPanelLayout(GameObject panelRoot)
+    {
+        if (panelRoot == null)
+            return;
+
+        var panelRect = panelRoot.GetComponent<RectTransform>();
+        if (panelRect == null)
+            return;
+
+        panelRect.anchorMin = Vector2.zero;
+        panelRect.anchorMax = Vector2.one;
+        panelRect.offsetMin = new Vector2(12f, 12f);
+        panelRect.offsetMax = new Vector2(-12f, -12f);
+        panelRoot.SetActive(false);
+    }
+
     private static UiZonePanelContent EnsureUiContent(Transform parent)
     {
         var contentObject = EnsureChildObject(parent, "UiContent");
         var content = contentObject.GetComponent<UiZonePanelContent>();
         if (content == null)
             content = contentObject.AddComponent<UiZonePanelContent>();
+        return content;
+    }
+
+    private static AuctionZonePanelContent EnsureAuctionContent(Transform parent)
+    {
+        var contentObject = EnsureChildObject(parent, "AuctionZoneContent");
+        var content = contentObject.GetComponent<AuctionZonePanelContent>();
+        if (content == null)
+            content = contentObject.AddComponent<AuctionZonePanelContent>();
         return content;
     }
 
@@ -335,9 +424,11 @@ public static class WorkspaceLayoutSetup
     private static void EnsureWorkspaceCanvas(
         TownPanelContent townContent,
         UiZonePanelContent uiContent,
+        AuctionZonePanelContent auctionContent,
         DungeonPanelContent dungeon1Content,
         DungeonPanelContent dungeon2Content,
-        DungeonPanelContent dungeon3Content)
+        DungeonPanelContent dungeon3Content,
+        DungeonPanelContent dungeon4Content)
     {
         var workspaceObject = GameObject.Find("GameWorkspace");
         if (workspaceObject == null)
@@ -380,6 +471,7 @@ public static class WorkspaceLayoutSetup
             DesktopOverlaySettings.TownPanelHeight,
             new Color(1f, 0.45f, 0.1f, 0.35f),
             townContent.transform,
+            null,
             null);
 
         EnsurePanel(
@@ -388,10 +480,23 @@ public static class WorkspaceLayoutSetup
             "UiZonePanel",
             "UI",
             DesktopOverlaySettings.GetDefaultUiZoneRect(),
-            DesktopOverlaySettings.ReferenceHeight - DesktopOverlaySettings.TownPanelHeight,
+            DesktopOverlaySettings.UiZonePanelHeight,
             new Color(0.65f, 0.65f, 0.65f, 0.25f),
             null,
-            uiContent);
+            uiContent,
+            null);
+
+        EnsurePanel(
+            layoutRoot,
+            WorkspacePanelId.Auction,
+            "AuctionZonePanel",
+            "경매",
+            DesktopOverlaySettings.GetDefaultAuctionRect(),
+            DesktopOverlaySettings.AuctionPanelHeight,
+            new Color(0.85f, 0.65f, 0.15f, 0.35f),
+            null,
+            null,
+            auctionContent);
 
         EnsurePanel(
             layoutRoot,
@@ -402,6 +507,7 @@ public static class WorkspaceLayoutSetup
             DesktopOverlaySettings.DungeonSlotHeight,
             new Color(0.35f, 0.55f, 0.95f, 0.35f),
             dungeon1Content.transform,
+            null,
             null);
 
         EnsurePanel(
@@ -413,6 +519,7 @@ public static class WorkspaceLayoutSetup
             DesktopOverlaySettings.DungeonSlotHeight,
             new Color(0.35f, 0.55f, 0.95f, 0.35f),
             dungeon2Content.transform,
+            null,
             null);
 
         EnsurePanel(
@@ -424,6 +531,19 @@ public static class WorkspaceLayoutSetup
             DesktopOverlaySettings.DungeonSlotHeight,
             new Color(0.35f, 0.55f, 0.95f, 0.35f),
             dungeon3Content.transform,
+            null,
+            null);
+
+        EnsurePanel(
+            layoutRoot,
+            WorkspacePanelId.DungeonSlot4,
+            "DungeonPanel_4",
+            DesktopOverlaySettings.GetDungeonDisplayLabel(3),
+            DesktopOverlaySettings.GetDefaultDungeonRectForSlot(3),
+            DesktopOverlaySettings.DungeonSlotHeight,
+            new Color(0.35f, 0.55f, 0.95f, 0.35f),
+            dungeon4Content.transform,
+            null,
             null);
     }
 
@@ -451,7 +571,8 @@ public static class WorkspaceLayoutSetup
         float scaleReferenceHeight,
         Color tint,
         Transform worldContentRoot,
-        UiZonePanelContent uiZoneContent)
+        UiZonePanelContent uiZoneContent,
+        AuctionZonePanelContent auctionZoneContent)
     {
         var panelTransform = parent.Find(objectName) ?? parent.Find(panelId);
         GameObject panelObject;
@@ -477,6 +598,7 @@ public static class WorkspaceLayoutSetup
         SetSerializedRect(serialized.FindProperty("defaultRect"), defaultRect);
         serialized.FindProperty("worldContentRoot").objectReferenceValue = worldContentRoot;
         serialized.FindProperty("uiZoneContent").objectReferenceValue = uiZoneContent;
+        serialized.FindProperty("auctionZoneContent").objectReferenceValue = auctionZoneContent;
         serialized.FindProperty("worldScaleReferenceHeight").floatValue = scaleReferenceHeight;
         serialized.ApplyModifiedPropertiesWithoutUndo();
 
@@ -488,22 +610,19 @@ public static class WorkspaceLayoutSetup
 
     private static void WireUiZoneContent(UiZonePanelContent uiContent)
     {
+        BuildingUISetup.EnsureBuildingPanel();
+
         var buildingUi = Object.FindFirstObjectByType<BuildingPanelUI>();
         if (buildingUi == null || uiContent == null)
             return;
 
-        var canvas = buildingUi.GetComponent<Canvas>();
         var buildingSerialized = new SerializedObject(buildingUi);
         var panelRootObject = buildingSerialized.FindProperty("panelRoot").objectReferenceValue as GameObject;
 
         var serialized = new SerializedObject(uiContent);
-        serialized.FindProperty("uiCanvas").objectReferenceValue = canvas;
         serialized.FindProperty("panelRoot").objectReferenceValue =
             panelRootObject != null ? panelRootObject.GetComponent<RectTransform>() : null;
         serialized.ApplyModifiedPropertiesWithoutUndo();
-
-        if (canvas != null && canvas.transform.parent != uiContent.transform)
-            canvas.transform.SetParent(uiContent.transform, true);
 
         foreach (var panel in Object.FindObjectsByType<WorkspacePanel>(FindObjectsSortMode.None))
         {
@@ -534,9 +653,16 @@ public static class WorkspaceLayoutSetup
         serialized.FindProperty("groundTilemap").objectReferenceValue = ground;
         serialized.FindProperty("propsRoot").objectReferenceValue = props;
         serialized.FindProperty("portalRoot").objectReferenceValue = portal;
-        serialized.FindProperty("portalOffsetX").floatValue = DesktopOverlaySettings.VillagePortalX;
-        serialized.FindProperty("portalOffsetY").floatValue = DesktopOverlaySettings.PortalY;
+        serialized.FindProperty("portalOffsetX").floatValue = TownPanelLayout.PortalLocalX;
+        serialized.FindProperty("portalOffsetY").floatValue = TownPanelLayout.PortalLocalY;
+        serialized.FindProperty("overrideWorldY").boolValue = true;
+        serialized.FindProperty("worldYOverride").floatValue = DesktopOverlaySettings.DefaultTownContentWorldY;
         serialized.ApplyModifiedPropertiesWithoutUndo();
+
+        portal.localPosition = new Vector3(
+            TownPanelLayout.PortalLocalX,
+            TownPanelLayout.PortalLocalY,
+            0f);
     }
 
     private static void WireDungeonContent(
@@ -555,9 +681,30 @@ public static class WorkspaceLayoutSetup
         serialized.FindProperty("propsRoot").objectReferenceValue = props;
         serialized.FindProperty("portalRoot").objectReferenceValue = portal;
         serialized.FindProperty("battleRoot").objectReferenceValue = battle;
-        serialized.FindProperty("portalOffsetX").floatValue = DesktopOverlaySettings.BattlePortalX;
-        serialized.FindProperty("portalOffsetY").floatValue = DesktopOverlaySettings.PortalY;
+        serialized.FindProperty("portalOffsetX").floatValue =
+            slotIndex == 2
+                ? DesktopOverlaySettings.PrimaryDungeonPortalLocalX
+                : DesktopOverlaySettings.BattlePortalX;
+        serialized.FindProperty("portalOffsetY").floatValue =
+            slotIndex == 2
+                ? DesktopOverlaySettings.PrimaryDungeonPortalLocalY
+                : DesktopOverlaySettings.PortalY;
+        if (slotIndex == 2)
+        {
+            serialized.FindProperty("overrideWorldY").boolValue = true;
+            serialized.FindProperty("worldYOverride").floatValue =
+                DesktopOverlaySettings.DefaultDungeon3ContentWorldY;
+        }
         serialized.ApplyModifiedPropertiesWithoutUndo();
+
+        portal.localPosition = new Vector3(
+            slotIndex == 2
+                ? DesktopOverlaySettings.PrimaryDungeonPortalLocalX
+                : DesktopOverlaySettings.BattlePortalX,
+            slotIndex == 2
+                ? DesktopOverlaySettings.PrimaryDungeonPortalLocalY
+                : DesktopOverlaySettings.PortalY,
+            0f);
     }
 
     private static void HideLockedDungeonPanels()
@@ -626,7 +773,7 @@ public static class WorkspaceLayoutSetup
         RemoveLegacyObject("RightColumn");
         RemoveLegacyObject("ZoneLayout");
 
-        foreach (var legacyName in new[] { "Town", "UiZone", "DungeonSlot_1", "DungeonSlot_2", "DungeonSlot_3" })
+        foreach (var legacyName in new[] { "Town", "UiZone", "Auction", "DungeonSlot_1", "DungeonSlot_2", "DungeonSlot_3", "DungeonSlot_4" })
         {
             var legacyPanel = GameObject.Find("GameWorkspace")?.transform.Find(legacyName);
             if (legacyPanel != null)
@@ -692,12 +839,167 @@ public static class WorkspaceLayoutSetup
         text.alignment = TextAnchor.MiddleCenter;
         text.color = Color.white;
         text.fontSize = 28;
-        text.raycastTarget = false;
+        text.raycastTarget = true;
+
+        if (labelTransform.GetComponent<WorkspacePanelDragHandle>() == null)
+            labelTransform.gameObject.AddComponent<WorkspacePanelDragHandle>();
 
         var rect = labelTransform.GetComponent<RectTransform>();
         rect.anchorMin = Vector2.zero;
         rect.anchorMax = Vector2.one;
         rect.offsetMin = Vector2.zero;
         rect.offsetMax = Vector2.zero;
+    }
+
+    private static void ConfigureAuctionPanelRaycasts(GameObject panelRoot)
+    {
+        if (panelRoot == null)
+            return;
+
+        var panelImage = panelRoot.GetComponent<Image>();
+        if (panelImage != null)
+            panelImage.raycastTarget = false;
+
+        foreach (var text in panelRoot.GetComponentsInChildren<Text>(true))
+            text.raycastTarget = false;
+    }
+
+    private static void MigrateLegacyAuctionPanel(Transform auctionZonePanel)
+    {
+        var workspace = GameObject.Find("GameWorkspace")?.transform;
+        if (workspace == null)
+            return;
+
+        var legacyPanel = workspace.Find("AuctionPanel");
+        if (legacyPanel == null || legacyPanel.parent == auctionZonePanel)
+            return;
+
+        legacyPanel.SetParent(auctionZonePanel, false);
+        legacyPanel.SetAsLastSibling();
+    }
+
+    private static void CleanupLegacyAuctionPanel()
+    {
+        var workspace = GameObject.Find("GameWorkspace")?.transform;
+        if (workspace == null)
+            return;
+
+        var legacyPanel = workspace.Find("AuctionPanel");
+        if (legacyPanel != null && legacyPanel.parent == workspace)
+            Object.DestroyImmediate(legacyPanel.gameObject);
+    }
+
+    private static GameObject FindOrCreateAuctionPanel(Transform auctionZonePanel)
+    {
+        var existing = auctionZonePanel.Find("AuctionPanel");
+        if (existing != null)
+            return existing.gameObject;
+
+        return CreateAuctionPanel(auctionZonePanel);
+    }
+
+    private static GameObject CreateAuctionPanel(Transform parent)
+    {
+        const string prefabPath = "Assets/Resources/Prefabs/UI/AuctionPanel.prefab";
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        if (prefab == null)
+        {
+            Debug.LogError($"WorkspaceLayoutSetup: AuctionPanel prefab not found at {prefabPath}");
+            return CreateLegacyAuctionPanel(parent);
+        }
+
+        var panel = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+        panel.name = "AuctionPanel";
+        panel.transform.SetAsLastSibling();
+
+        var panelRect = panel.GetComponent<RectTransform>();
+        panelRect.anchorMin = Vector2.zero;
+        panelRect.anchorMax = Vector2.one;
+        panelRect.offsetMin = Vector2.zero;
+        panelRect.offsetMax = Vector2.zero;
+
+        panel.SetActive(false);
+        return panel;
+    }
+
+    private static GameObject CreateLegacyAuctionPanel(Transform parent)
+    {
+        var panel = new GameObject("AuctionPanel", typeof(RectTransform));
+        panel.transform.SetParent(parent, false);
+        panel.transform.SetAsLastSibling();
+
+        var panelImage = panel.AddComponent<Image>();
+        panelImage.color = new Color(0.06f, 0.08f, 0.12f, 0.96f);
+        panelImage.raycastTarget = false;
+
+        var panelRect = panel.GetComponent<RectTransform>();
+        panelRect.anchorMin = Vector2.zero;
+        panelRect.anchorMax = Vector2.one;
+        panelRect.offsetMin = new Vector2(12f, 12f);
+        panelRect.offsetMax = new Vector2(-12f, -12f);
+
+        CreateAuctionText("Title", panel.transform, 32, new Vector2(0.04f, 0.88f), new Vector2(0.96f, 0.97f),
+            "게이트 경매장", FontStyle.Bold);
+        CreateAuctionText("Body", panel.transform, 20, new Vector2(0.04f, 0.12f), new Vector2(0.96f, 0.86f),
+            "경매 UI 준비 중.", FontStyle.Normal);
+
+        var closeObject = new GameObject("CloseButton", typeof(RectTransform));
+        closeObject.transform.SetParent(panel.transform, false);
+        var closeRect = closeObject.GetComponent<RectTransform>();
+        closeRect.anchorMin = new Vector2(0.78f, 0.02f);
+        closeRect.anchorMax = new Vector2(0.96f, 0.08f);
+        closeRect.offsetMin = Vector2.zero;
+        closeRect.offsetMax = Vector2.zero;
+
+        var closeImage = closeObject.AddComponent<Image>();
+        closeImage.color = new Color(0.25f, 0.32f, 0.42f, 1f);
+        var closeButton = closeObject.AddComponent<Button>();
+        closeButton.targetGraphic = closeImage;
+
+        var closeLabel = CreateAuctionText("Label", closeObject.transform, 18, Vector2.zero, Vector2.one, "닫기",
+            FontStyle.Normal);
+        closeLabel.GetComponent<Text>().alignment = TextAnchor.MiddleCenter;
+        StretchAuctionRect(closeLabel.GetComponent<RectTransform>());
+
+        panel.SetActive(false);
+        return panel;
+    }
+
+    private static GameObject CreateAuctionText(
+        string name,
+        Transform parent,
+        int fontSize,
+        Vector2 anchorMin,
+        Vector2 anchorMax,
+        string text,
+        FontStyle style)
+    {
+        var obj = new GameObject(name, typeof(RectTransform));
+        obj.transform.SetParent(parent, false);
+        var rect = obj.GetComponent<RectTransform>();
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        var label = obj.AddComponent<Text>();
+        label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        label.fontSize = fontSize;
+        label.fontStyle = style;
+        label.color = Color.white;
+        label.text = text;
+        label.alignment = TextAnchor.UpperLeft;
+        label.horizontalOverflow = HorizontalWrapMode.Wrap;
+        label.verticalOverflow = VerticalWrapMode.Overflow;
+        label.raycastTarget = false;
+        return obj;
+    }
+
+    private static void StretchAuctionRect(RectTransform rectTransform)
+    {
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
     }
 }

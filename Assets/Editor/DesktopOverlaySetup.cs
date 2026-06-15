@@ -1,5 +1,4 @@
 using System.Linq;
-using System.Reflection;
 using Kirurobo;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -50,109 +49,6 @@ public static class DesktopOverlaySetup
         }
 
         Debug.Log("Desktop overlay project settings applied.");
-    }
-
-    [MenuItem("The Guild/Desktop Overlay/Setup Game View Preview")]
-    public static void SetupGameViewPreview()
-    {
-        var width = (int)DesktopOverlaySettings.WindowWidth;
-        var height = (int)DesktopOverlaySettings.WindowHeight;
-        const string label = "Guild Overlay";
-
-        var index = FindOrAddGameViewSize(width, height, label);
-        if (index >= 0)
-            SetGameViewSize(index);
-
-        Debug.Log(
-            "Game view preview configured.\n" +
-            $"- Aspect: {width} x {height} (Guild Overlay)\n" +
-            "- Develop at 1920x1080, then add a 3440x1440 (or your monitor) Game view size to verify ultrawide.\n" +
-            "- Builds use the full monitor when Match Display Size is enabled on DesktopOverlay.");
-    }
-
-    private static int FindOrAddGameViewSize(int width, int height, string label)
-    {
-        var index = FindGameViewSize(GameViewSizeGroupType.Standalone, width, height);
-        if (index >= 0)
-            return index;
-
-        var group = GetGameViewSizeGroup(GameViewSizeGroupType.Standalone);
-        if (group == null)
-            return -1;
-
-        var groupType = group.GetType();
-        var addCustomSize = groupType.GetMethod("AddCustomSize");
-        if (addCustomSize == null)
-            return -1;
-
-        var gameViewSizeType = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSize");
-        var gameViewSizeEnumType = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSizeType");
-        if (gameViewSizeType == null || gameViewSizeEnumType == null)
-            return -1;
-
-        var constructor = gameViewSizeType.GetConstructor(new[]
-        {
-            gameViewSizeEnumType,
-            typeof(int),
-            typeof(int),
-            typeof(string)
-        });
-
-        if (constructor == null)
-            return -1;
-
-        var sizeType = System.Enum.Parse(gameViewSizeEnumType, "FixedResolution");
-        var newSize = constructor.Invoke(new object[] { sizeType, width, height, label });
-        addCustomSize.Invoke(group, new object[] { newSize });
-        return FindGameViewSize(GameViewSizeGroupType.Standalone, width, height);
-    }
-
-    private static int FindGameViewSize(GameViewSizeGroupType sizeGroupType, int width, int height)
-    {
-        var group = GetGameViewSizeGroup(sizeGroupType);
-        if (group == null)
-            return -1;
-
-        var groupType = group.GetType();
-        var getBuiltinCount = groupType.GetMethod("GetBuiltinCount");
-        var getCustomCount = groupType.GetMethod("GetCustomCount");
-        var sizesCount = (int)getBuiltinCount.Invoke(group, null) + (int)getCustomCount.Invoke(group, null);
-        var getGameViewSize = groupType.GetMethod("GetGameViewSize");
-        var gameViewSizeType = getGameViewSize.ReturnType;
-        var widthProp = gameViewSizeType.GetProperty("width");
-        var heightProp = gameViewSizeType.GetProperty("height");
-        var indexValue = new object[1];
-
-        for (var i = 0; i < sizesCount; i++)
-        {
-            indexValue[0] = i;
-            var size = getGameViewSize.Invoke(group, indexValue);
-            if ((int)widthProp.GetValue(size) == width && (int)heightProp.GetValue(size) == height)
-                return i;
-        }
-
-        return -1;
-    }
-
-    private static object GetGameViewSizeGroup(GameViewSizeGroupType type)
-    {
-        var sizesType = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSizes");
-        var singletonType = typeof(ScriptableSingleton<>).MakeGenericType(sizesType);
-        var instance = singletonType.GetProperty("instance", BindingFlags.Public | BindingFlags.Static)
-            ?.GetValue(null);
-        var getGroup = sizesType?.GetMethod("GetGroup");
-        return getGroup?.Invoke(instance, new object[] { (int)type });
-    }
-
-    private static void SetGameViewSize(int index)
-    {
-        var gameViewType = typeof(Editor).Assembly.GetType("UnityEditor.GameView");
-        var selectedSizeIndexProp = gameViewType?.GetProperty(
-            "selectedSizeIndex",
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        var gameView = EditorWindow.GetWindow(gameViewType);
-        selectedSizeIndexProp?.SetValue(gameView, index);
-        gameView.Repaint();
     }
 
     [MenuItem("The Guild/Desktop Overlay/Setup Main Scene")]

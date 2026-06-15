@@ -33,18 +33,23 @@ public static class WorkspacePanelLayoutStore
                  {
                      WorkspacePanelId.Town,
                      WorkspacePanelId.UiZone,
+                     WorkspacePanelId.Auction,
                      WorkspacePanelId.DungeonSlot1,
                      WorkspacePanelId.DungeonSlot2,
-                     WorkspacePanelId.DungeonSlot3
+                     WorkspacePanelId.DungeonSlot3,
+                     WorkspacePanelId.DungeonSlot4
                  })
-        {
-            PlayerPrefs.DeleteKey(Key(panelId, "x"));
-            PlayerPrefs.DeleteKey(Key(panelId, "y"));
-            PlayerPrefs.DeleteKey(Key(panelId, "w"));
-            PlayerPrefs.DeleteKey(Key(panelId, "h"));
-        }
+            Clear(panelId);
 
         PlayerPrefs.Save();
+    }
+
+    public static void Clear(string panelId)
+    {
+        PlayerPrefs.DeleteKey(Key(panelId, "x"));
+        PlayerPrefs.DeleteKey(Key(panelId, "y"));
+        PlayerPrefs.DeleteKey(Key(panelId, "w"));
+        PlayerPrefs.DeleteKey(Key(panelId, "h"));
     }
 
     private static string Key(string panelId, string suffix) => Prefix + panelId + "_" + suffix;

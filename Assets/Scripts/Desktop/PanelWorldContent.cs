@@ -7,6 +7,10 @@ public abstract class PanelWorldContent : MonoBehaviour
 
     [SerializeField] private Transform contentRoot;
 
+    [Header("Layout Tuning")]
+    [SerializeField] private bool overrideWorldY;
+    [SerializeField] private float worldYOverride;
+
     public Transform ContentRoot => contentRoot != null ? contentRoot : transform;
 
     public abstract void ApplyLayout(
@@ -68,6 +72,9 @@ public abstract class PanelWorldContent : MonoBehaviour
         root.position = worldAnchorPosition;
         root.localScale = scale;
 
+        if (overrideWorldY)
+            root.position = new Vector3(root.position.x, worldYOverride, root.position.z);
+
         if (groundTilemap != null)
         {
             var gridTransform = groundTilemap.layoutGrid != null
@@ -120,6 +127,9 @@ public abstract class PanelWorldContent : MonoBehaviour
         if (!TryMeasureTilemapLocalBounds(groundTilemap, root, out var localMin, out var localMax, out var localSize))
             return false;
 
+        if (localSize.x <= 0f || localSize.y <= 0f)
+            return false;
+
         DesktopOverlaySettings.ReferenceRectToWorldBounds(rect, camera, out var panelBottomLeft, out var panelTopRight);
         var panelWorldW = panelTopRight.x - panelBottomLeft.x;
         var panelWorldH = panelTopRight.y - panelBottomLeft.y;
@@ -133,12 +143,59 @@ public abstract class PanelWorldContent : MonoBehaviour
 
         var localCenterX = (localMin.x + localMax.x) * 0.5f;
         var panelCenterX = (panelBottomLeft.x + panelTopRight.x) * 0.5f;
+        var groundSurfaceLocalY = TryGetGroundSurfaceLocalY(groundTilemap, root, out var surfaceLocalY)
+            ? surfaceLocalY
+            : localMax.y;
+        var targetSurfaceWorldY = DesktopOverlaySettings.ReferenceYToWorld(rect.y, camera);
+
         worldPosition = new Vector3(
             panelCenterX - uniform * localCenterX,
-            panelBottomLeft.y - uniform * localMin.y,
+            targetSurfaceWorldY - uniform * groundSurfaceLocalY,
             0f);
 
         return true;
+    }
+
+    private static bool TryGetGroundSurfaceLocalY(
+        Tilemap tilemap,
+        Transform contentRoot,
+        out float surfaceLocalY)
+    {
+        surfaceLocalY = 0f;
+        if (tilemap == null || contentRoot == null)
+            return false;
+
+        tilemap.CompressBounds();
+        var bounds = tilemap.cellBounds;
+        if (bounds.size.x <= 0 || bounds.size.y <= 0)
+            return false;
+
+        var minY = bounds.yMin;
+        var maxY = bounds.yMax;
+        for (var y = maxY; y >= minY; y--)
+        {
+            var hasTile = false;
+            for (var x = bounds.xMin; x <= bounds.xMax; x++)
+            {
+                if (!tilemap.HasTile(new Vector3Int(x, y, 0)))
+                    continue;
+
+                hasTile = true;
+                break;
+            }
+
+            if (!hasTile)
+                continue;
+
+            var cellCenter = CellCenterToContentRootLocal(tilemap, contentRoot, new Vector3Int(bounds.xMin, y, 0));
+            var halfCell = tilemap.layoutGrid != null
+                ? tilemap.layoutGrid.cellSize.y * 0.5f
+                : 0.5f;
+            surfaceLocalY = cellCenter.y + halfCell;
+            return true;
+        }
+
+        return false;
     }
 
     private static bool TryMeasureTilemapLocalBounds(

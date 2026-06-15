@@ -9,6 +9,9 @@ public class BuildingPanelUI : MonoBehaviour
     [SerializeField] private Text titleText;
     [SerializeField] private Text bodyText;
     [SerializeField] private Button closeButton;
+    [SerializeField] private Vector2 panelPadding = new(12f, 12f);
+
+    public Vector2 PanelPadding => panelPadding;
 
     private void Awake()
     {
@@ -88,12 +91,13 @@ public class BuildingPanelUI : MonoBehaviour
             return;
         }
 
+        ApplyPanelRectFallback();
+    }
+
+    private void ApplyPanelRectFallback()
+    {
         if (panelRoot == null)
             return;
-
-        var canvasRect = GetComponent<RectTransform>();
-        var uiZoneRect = DesktopOverlaySettings.GetDefaultUiZoneRect();
-        DesktopOverlaySettings.ApplyFixedReferenceRectOnScreen(canvasRect, uiZoneRect);
 
         var panelRect = panelRoot.GetComponent<RectTransform>();
         if (panelRect == null)
@@ -101,19 +105,7 @@ public class BuildingPanelUI : MonoBehaviour
 
         panelRect.anchorMin = Vector2.zero;
         panelRect.anchorMax = Vector2.one;
-        panelRect.offsetMin = new Vector2(12f, 12f);
-        panelRect.offsetMax = new Vector2(-12f, -12f);
-
-        var canvasScaler = GetComponent<CanvasScaler>();
-        if (canvasScaler != null)
-        {
-            canvasScaler.uiScaleMode = DesktopOverlaySettings.UseFixedPanelLayout
-                ? CanvasScaler.ScaleMode.ConstantPixelSize
-                : CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            canvasScaler.scaleFactor = 1f;
-            canvasScaler.referenceResolution = DesktopOverlaySettings.WindowSize;
-            canvasScaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-            canvasScaler.matchWidthOrHeight = 1f;
-        }
+        panelRect.offsetMin = panelPadding;
+        panelRect.offsetMax = -panelPadding;
     }
 }

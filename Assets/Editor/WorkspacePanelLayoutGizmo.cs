@@ -37,20 +37,6 @@ public static class WorkspacePanelLayoutGizmo
         sceneLayoutPending = true;
     }
 
-    [MenuItem("The Guild/Layout/Toggle Panel Layout Guides")]
-    private static void ToggleGuides()
-    {
-        showGuides = !showGuides;
-        SceneView.RepaintAll();
-        Debug.Log(showGuides
-            ? "Workspace panel layout guides enabled in Scene view."
-            : "Workspace panel layout guides disabled.");
-    }
-
-    [MenuItem("The Guild/Layout/Toggle Panel Layout Guides", true)]
-    private static bool ToggleGuidesValidate() => true;
-
-    [MenuItem("The Guild/Layout/Preview Panel Layout In Scene")]
     public static void PreviewPanelLayoutInScene()
     {
         if (Application.isPlaying)
@@ -69,33 +55,7 @@ public static class WorkspacePanelLayoutGizmo
         SceneView.RepaintAll();
         Debug.Log(
             "Panel layout preview applied. Scene tiles now match the Play layout guides. " +
-            "Use Prepare Town/Dungeon Ground For Painting to focus the tile brush.");
-    }
-
-    [MenuItem("The Guild/Layout/Prepare Dungeon 1 Ground For Painting")]
-    public static void PrepareDungeon3GroundForPainting()
-    {
-        var tilemap = FindGroundTilemapForPanel(WorkspacePanelId.DungeonSlot3);
-        if (tilemap == null)
-        {
-            Debug.LogWarning("Dungeon 1 ground tilemap not found.");
-            return;
-        }
-
-        PrepareTilemapForPainting(tilemap);
-    }
-
-    [MenuItem("The Guild/Layout/Prepare Town Ground For Painting")]
-    public static void PrepareTownGroundForPainting()
-    {
-        var tilemap = FindGroundTilemapForPanel(WorkspacePanelId.Town);
-        if (tilemap == null)
-        {
-            Debug.LogWarning("Town ground tilemap not found.");
-            return;
-        }
-
-        PrepareTilemapForPainting(tilemap);
+            "Use tile painting tools in the Scene view to edit ground tiles.");
     }
 
     private static Tilemap FindGroundTilemapForPanel(string panelId)
@@ -267,7 +227,9 @@ public static class WorkspacePanelLayoutGizmo
     {
         WorkspacePanelId.Town => new Color(1f, 0.45f, 0.1f, 0.9f),
         WorkspacePanelId.UiZone => new Color(0.65f, 0.65f, 0.65f, 0.9f),
+        WorkspacePanelId.Auction => new Color(0.85f, 0.65f, 0.15f, 0.9f),
         WorkspacePanelId.DungeonSlot1 or WorkspacePanelId.DungeonSlot2 or WorkspacePanelId.DungeonSlot3
+            or WorkspacePanelId.DungeonSlot4
             => new Color(0.35f, 0.55f, 0.95f, 0.9f),
         _ => Color.white
     };

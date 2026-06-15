@@ -432,6 +432,7 @@ public class WorkspaceLayoutController : MonoBehaviour
             ApplyPanelLayout(panel, camera);
 
         BuildingPanelUI.ApplyToUiZone();
+        AuctionPanelUI.ApplyToAuctionZone();
 
         layoutDirty = false;
         IsApplied = true;
@@ -445,6 +446,7 @@ public class WorkspaceLayoutController : MonoBehaviour
 
         panel.ApplyWorldContentLayout(camera, editorPreviewMode);
         panel.ApplyUiZoneLayout();
+        panel.ApplyAuctionZoneLayout();
     }
 
     private DungeonPanelContent ResolvePrimaryDungeonContent()

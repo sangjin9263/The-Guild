@@ -6,41 +6,8 @@ using UnityEngine.UI;
 
 public static class BuildingUISetup
 {
-    private const string MainScenePath = "Assets/Scenes/Main.unity";
-
-    [MenuItem("The Guild/UI/Setup Building Panel")]
-    public static void SetupBuildingPanelInActiveScene()
-    {
-        EnsureBuildingPanel();
-        ApplyBuildingPanelLayout();
-        WireBuildingClickables();
-        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-        Debug.Log("Building panel UI setup complete.");
-    }
-
-    [MenuItem("The Guild/UI/Apply Building Panel Layout")]
-    public static void ApplyBuildingPanelLayoutInActiveScene()
-    {
-        ApplyBuildingPanelLayout();
-        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-        Debug.Log("Building panel layout applied.");
-    }
-
-    [MenuItem("The Guild/UI/Setup Building Panel In Main")]
-    public static void SetupBuildingPanelInMain()
-    {
-        var scene = EditorSceneManager.OpenScene(MainScenePath, OpenSceneMode.Single);
-        SetupBuildingPanelInActiveScene();
-        EditorSceneManager.SaveScene(scene);
-    }
-
     public static void EnsureBuildingPanel()
     {
-        CleanupDuplicateBuildingUiCanvas();
-
-        if (Object.FindFirstObjectByType<BuildingPanelUI>() != null)
-            return;
-
         if (Object.FindFirstObjectByType<EventSystem>() == null)
         {
             var eventSystemObject = new GameObject("EventSystem");
@@ -48,58 +15,40 @@ public static class BuildingUISetup
             eventSystemObject.AddComponent<StandaloneInputModule>();
         }
 
-        var canvasObject = new GameObject("BuildingUICanvas");
-        var canvas = canvasObject.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 200;
+        var workspace = GameObject.Find("GameWorkspace");
+        if (workspace == null)
+        {
+            Debug.LogWarning("GameWorkspace not found. Run The Guild/Layout/Setup Workspace Layout first.");
+            return;
+        }
 
-        canvasObject.AddComponent<CanvasScaler>();
-        canvasObject.AddComponent<GraphicRaycaster>();
-        ConfigureCanvasScaler(canvasObject.GetComponent<CanvasScaler>());
+        var uiZonePanel = FindUiZonePanelTransform(workspace.transform);
+        if (uiZonePanel == null)
+        {
+            Debug.LogWarning("UiZonePanel not found under GameWorkspace/LayoutRoot.");
+            return;
+        }
 
-        var panelRoot = CreatePanel(canvasObject.transform);
+        CleanupDuplicateBuildingUiCanvas();
+
+        var panelRoot = FindOrCreateBuildingPanel(uiZonePanel);
         var closeButton = panelRoot.transform.Find("CloseButton")?.GetComponent<Button>();
 
-        var controller = canvasObject.AddComponent<BuildingPanelUI>();
+        var controller = workspace.GetComponent<BuildingPanelUI>();
+        if (controller == null)
+            controller = workspace.AddComponent<BuildingPanelUI>();
 
-        var serialized = new SerializedObject(controller);
-        serialized.FindProperty("panelRoot").objectReferenceValue = panelRoot;
-        serialized.FindProperty("titleText").objectReferenceValue =
+        var buildingSerialized = new SerializedObject(controller);
+        buildingSerialized.FindProperty("panelRoot").objectReferenceValue = panelRoot;
+        buildingSerialized.FindProperty("titleText").objectReferenceValue =
             panelRoot.transform.Find("Title")?.GetComponent<Text>();
-        serialized.FindProperty("bodyText").objectReferenceValue =
+        buildingSerialized.FindProperty("bodyText").objectReferenceValue =
             panelRoot.transform.Find("Body")?.GetComponent<Text>();
-        serialized.FindProperty("closeButton").objectReferenceValue = closeButton;
-        serialized.ApplyModifiedPropertiesWithoutUndo();
-    }
+        buildingSerialized.FindProperty("closeButton").objectReferenceValue = closeButton;
+        buildingSerialized.ApplyModifiedPropertiesWithoutUndo();
 
-    private static void CleanupDuplicateBuildingUiCanvas()
-    {
-        var controllers = Object.FindObjectsByType<BuildingPanelUI>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
-
-        if (controllers.Length <= 1)
-            return;
-
-        BuildingPanelUI keep = null;
-        foreach (var controller in controllers)
-        {
-            if (controller.gameObject.activeInHierarchy)
-            {
-                keep = controller;
-                break;
-            }
-        }
-
-        keep ??= controllers[0];
-
-        foreach (var controller in controllers)
-        {
-            if (controller == keep)
-                continue;
-
-            Object.DestroyImmediate(controller.gameObject);
-        }
+        WireUiZonePanelContent(uiZonePanel, panelRoot);
+        DestroyLegacyBuildingUiCanvas();
     }
 
     public static void ApplyBuildingPanelLayout()
@@ -111,50 +60,161 @@ public static class BuildingUISetup
             return;
         }
 
-        ConfigureCanvasScaler(controller.GetComponent<CanvasScaler>());
+        BuildingPanelUI.ApplyToUiZone();
+    }
 
-        var serialized = new SerializedObject(controller);
-        var panelRoot = serialized.FindProperty("panelRoot").objectReferenceValue as GameObject;
-        if (panelRoot == null)
-            panelRoot = controller.transform.Find("BuildingPanel")?.gameObject;
+    private static Transform FindUiZonePanelTransform(Transform workspace)
+    {
+        var layoutRoot = workspace.Find("LayoutRoot");
+        if (layoutRoot == null)
+            return null;
 
-        if (panelRoot == null)
+        return layoutRoot.Find("UiZonePanel");
+    }
+
+    private static GameObject FindOrCreateBuildingPanel(Transform uiZonePanel)
+    {
+        var existing = uiZonePanel.Find("BuildingPanel");
+        if (existing != null)
+            return existing.gameObject;
+
+        var legacyCanvas = GameObject.Find("BuildingUICanvas");
+        if (legacyCanvas != null)
         {
-            Debug.LogWarning("BuildingPanel not found.");
-            return;
+            var legacyPanel = legacyCanvas.transform.Find("BuildingPanel");
+            if (legacyPanel != null)
+            {
+                legacyPanel.SetParent(uiZonePanel, false);
+                return legacyPanel.gameObject;
+            }
         }
 
-        ApplyPanelRect(controller.GetComponent<RectTransform>(), panelRoot.GetComponent<RectTransform>());
+        return CreatePanel(uiZonePanel);
     }
 
-    private static void ConfigureCanvasScaler(CanvasScaler scaler)
+    private static void WireUiZonePanelContent(Transform uiZonePanel, GameObject panelRoot)
     {
-        if (scaler == null)
+        var workspacePanel = uiZonePanel.GetComponent<WorkspacePanel>();
+        if (workspacePanel == null)
             return;
 
-        scaler.uiScaleMode = DesktopOverlaySettings.UseFixedPanelLayout
-            ? CanvasScaler.ScaleMode.ConstantPixelSize
-            : CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.scaleFactor = 1f;
-        scaler.referenceResolution = DesktopOverlaySettings.WindowSize;
-        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-        scaler.matchWidthOrHeight = 1f;
+        var uiContent = workspacePanel.UiZoneContent;
+        if (uiContent == null)
+            return;
+
+        var serialized = new SerializedObject(uiContent);
+        serialized.FindProperty("panelRoot").objectReferenceValue =
+            panelRoot != null ? panelRoot.GetComponent<RectTransform>() : null;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+
+        var panelSerialized = new SerializedObject(workspacePanel);
+        panelSerialized.FindProperty("uiZoneContent").objectReferenceValue = uiContent;
+        panelSerialized.ApplyModifiedPropertiesWithoutUndo();
     }
 
-    private static void ApplyPanelRect(RectTransform canvasRect, RectTransform panelRect)
+    private static void DestroyLegacyBuildingUiCanvas()
     {
-        if (canvasRect != null)
-            DesktopOverlaySettings.ApplyFixedReferenceRectOnScreen(
-                canvasRect,
-                DesktopOverlaySettings.GetDefaultUiZoneRect());
-
-        if (panelRect == null)
+        var legacyCanvas = GameObject.Find("BuildingUICanvas");
+        if (legacyCanvas == null)
             return;
 
-        panelRect.anchorMin = Vector2.zero;
-        panelRect.anchorMax = Vector2.one;
-        panelRect.offsetMin = Vector2.zero;
-        panelRect.offsetMax = Vector2.zero;
+        if (legacyCanvas.transform.childCount > 0)
+            return;
+
+        Object.DestroyImmediate(legacyCanvas);
+    }
+
+    private static void CleanupDuplicateBuildingUiCanvas()
+    {
+        var controllers = Object.FindObjectsByType<BuildingPanelUI>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        BuildingPanelUI keep = null;
+        var workspace = GameObject.Find("GameWorkspace");
+        if (workspace != null)
+            keep = workspace.GetComponent<BuildingPanelUI>();
+
+        if (keep == null)
+        {
+            foreach (var controller in controllers)
+            {
+                if (controller.gameObject.activeInHierarchy)
+                {
+                    keep = controller;
+                    break;
+                }
+            }
+        }
+
+        keep ??= controllers.Length > 0 ? controllers[0] : null;
+        if (keep == null)
+            return;
+
+        foreach (var controller in controllers)
+        {
+            if (controller == keep)
+                continue;
+
+            var panel = controller.transform.Find("BuildingPanel");
+            if (panel != null && workspace != null)
+            {
+                var uiZone = FindUiZonePanelTransform(workspace.transform);
+                if (uiZone != null && panel.parent != uiZone)
+                    panel.SetParent(uiZone, false);
+            }
+
+            if (controller.gameObject.name == "BuildingUICanvas")
+                Object.DestroyImmediate(controller.gameObject);
+            else
+                Object.DestroyImmediate(controller);
+        }
+    }
+
+    public static void RemoveMisplacedBuildingClickables()
+    {
+        foreach (var controller in Object.FindObjectsByType<BuildingPanelUI>(
+                     FindObjectsInactive.Include,
+                     FindObjectsSortMode.None))
+        {
+            var host = controller.gameObject;
+            var misplacedClickable = host.GetComponent<BuildingClickable>();
+            if (misplacedClickable != null)
+                Object.DestroyImmediate(misplacedClickable);
+
+            var misplacedCollider = host.GetComponent<BoxCollider2D>();
+            if (misplacedCollider != null)
+                Object.DestroyImmediate(misplacedCollider);
+        }
+    }
+
+    public static void WireTownPropBuildings()
+    {
+        var town = Object.FindFirstObjectByType<TownPanelContent>(FindObjectsInactive.Include);
+        if (town == null)
+            return;
+
+        var props = town.transform.Find("Props");
+        if (props == null)
+            return;
+
+        for (var i = 0; i < props.childCount; i++)
+        {
+            var child = props.GetChild(i);
+            if (child.GetComponent<SpriteRenderer>() == null)
+                continue;
+
+            if (child.GetComponent<AuctionBuildingClickable>() != null)
+                continue;
+
+            if (child.name.StartsWith("Auction"))
+                continue;
+
+            WireBuildingObject(
+                child.gameObject,
+                "헌터 길드",
+                "HUNTER COMPANY\n용병 관리 · 파견. (준비 중)");
+        }
     }
 
     public static void WireBuildingClickables()
@@ -162,15 +222,39 @@ public static class BuildingUISetup
         var buildingRoots = Object.FindObjectsByType<Transform>(FindObjectsSortMode.None);
         foreach (var transform in buildingRoots)
         {
-            if (!transform.name.StartsWith("Building"))
+            if (!IsBuildingObjectName(transform.name))
                 continue;
 
-            if (transform.GetComponent<BuildingClickable>() != null)
-                continue;
-
-            EnsureBuildingCollider(transform.gameObject);
-            transform.gameObject.AddComponent<BuildingClickable>();
+            WireBuildingObject(
+                transform.gameObject,
+                "Building 1",
+                "Guild building. Upgrade and manage mercenaries here.");
         }
+    }
+
+    private static bool IsBuildingObjectName(string objectName)
+    {
+        if (string.IsNullOrEmpty(objectName))
+            return false;
+
+        if (objectName.StartsWith("Building"))
+            return true;
+
+        return objectName.Contains("건물") || objectName.Contains("BuildingLV");
+    }
+
+    private static void WireBuildingObject(GameObject buildingObject, string title, string description)
+    {
+        EnsureBuildingCollider(buildingObject);
+
+        var clickable = buildingObject.GetComponent<BuildingClickable>();
+        if (clickable == null)
+            clickable = buildingObject.AddComponent<BuildingClickable>();
+
+        var serialized = new SerializedObject(clickable);
+        serialized.FindProperty("buildingTitle").stringValue = title;
+        serialized.FindProperty("buildingDescription").stringValue = description;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static void EnsureBuildingCollider(GameObject buildingObject)
@@ -195,11 +279,10 @@ public static class BuildingUISetup
         panelImage.color = new Color(0.08f, 0.1f, 0.14f, 0.92f);
 
         var panelRect = panel.GetComponent<RectTransform>();
-        var uiZone = DesktopOverlaySettings.GetDefaultUiZoneRect();
         panelRect.anchorMin = Vector2.zero;
         panelRect.anchorMax = Vector2.one;
-        panelRect.offsetMin = Vector2.zero;
-        panelRect.offsetMax = Vector2.zero;
+        panelRect.offsetMin = new Vector2(12f, 12f);
+        panelRect.offsetMax = new Vector2(-12f, -12f);
 
         var title = CreateText("Title", panel.transform, 28, TextAnchor.UpperLeft);
         var titleRect = title.GetComponent<RectTransform>();

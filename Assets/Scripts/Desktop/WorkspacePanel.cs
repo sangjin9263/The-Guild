@@ -21,6 +21,7 @@ public class WorkspacePanel : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
     [Header("Content")]
     [SerializeField] private Transform worldContentRoot;
     [SerializeField] private UiZonePanelContent uiZoneContent;
+    [SerializeField] private AuctionZonePanelContent auctionZoneContent;
 
     [Header("Frame")]
     [SerializeField] private bool showFrame = true;
@@ -39,6 +40,7 @@ public class WorkspacePanel : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
     public WorkspacePanelRect DefaultRect => GetDefaultRect();
     public Transform WorldContentRoot => worldContentRoot;
     public UiZonePanelContent UiZoneContent => uiZoneContent;
+    public AuctionZonePanelContent AuctionZoneContent => auctionZoneContent;
     public float WorldScaleReferenceHeight => worldScaleReferenceHeight;
 
     public TownPanelContent TownContent =>
@@ -51,6 +53,7 @@ public class WorkspacePanel : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
     {
         rectTransform = GetComponent<RectTransform>();
         EnsureVisuals();
+        EnsureDragHandle();
     }
 
     public void Configure(
@@ -152,6 +155,12 @@ public class WorkspacePanel : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
             uiZoneContent.ApplyLayout(referenceRect);
     }
 
+    public void ApplyAuctionZoneLayout()
+    {
+        if (auctionZoneContent != null)
+            auctionZoneContent.ApplyLayout(referenceRect);
+    }
+
     public void SetContentVisible(bool visible)
     {
         if (worldContentRoot != null)
@@ -159,6 +168,9 @@ public class WorkspacePanel : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
 
         if (uiZoneContent != null)
             uiZoneContent.gameObject.SetActive(visible);
+
+        if (auctionZoneContent != null)
+            auctionZoneContent.gameObject.SetActive(visible);
     }
 
     public void OnBeginDrag(PointerEventData eventData)
@@ -257,6 +269,20 @@ public class WorkspacePanel : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
 
         if (labelText == null)
             labelText = GetComponentInChildren<Text>(true);
+    }
+
+    private void EnsureDragHandle()
+    {
+        var labelTransform = transform.Find("Label");
+        if (labelTransform == null)
+            return;
+
+        if (labelTransform.GetComponent<WorkspacePanelDragHandle>() == null)
+            labelTransform.gameObject.AddComponent<WorkspacePanelDragHandle>();
+
+        var text = labelTransform.GetComponent<Text>();
+        if (text != null)
+            text.raycastTarget = true;
     }
 
     private WorkspacePanelRect ReadRectFromTransform()

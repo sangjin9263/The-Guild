@@ -18,8 +18,28 @@ public class BuildingClickable : MonoBehaviour
         EnsureCollider();
     }
 
-    private void OnMouseDown()
+    private void Update()
     {
+        if (!Input.GetMouseButtonDown(0))
+            return;
+
+        TryHandleClick();
+    }
+
+    private void TryHandleClick()
+    {
+        var collider = GetComponent<Collider2D>();
+        if (collider == null)
+            return;
+
+        var camera = Camera.main;
+        if (camera == null)
+            return;
+
+        var worldPoint = camera.ScreenToWorldPoint(Input.mousePosition);
+        if (!collider.OverlapPoint(worldPoint))
+            return;
+
         if (BuildingPanelUI.Instance == null)
         {
             Debug.LogWarning("BuildingPanelUI not found in scene.", this);

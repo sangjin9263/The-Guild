@@ -7,9 +7,9 @@ public class TownPanelContent : PanelWorldContent
     [SerializeField] private Transform propsRoot;
     [SerializeField] private Transform portalRoot;
     [Tooltip("Default for new portals in editor setup. Move Portal in the Scene to place it.")]
-    [SerializeField] private float portalOffsetX = 26f;
+    [SerializeField] private float portalOffsetX = -10f;
     [Tooltip("Default for new portals in editor setup. Move Portal in the Scene to place it.")]
-    [SerializeField] private float portalOffsetY = -3f;
+    [SerializeField] private float portalOffsetY = -3.36f;
 
     public Tilemap GroundTilemap => groundTilemap;
 

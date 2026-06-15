@@ -57,23 +57,13 @@ public class GameManager : MonoBehaviour
     public bool IsSlotEmpty(int slotIndex) => GetSlotState(slotIndex).Phase == DungeonSlotPhase.Empty;
 
     /// <summary>
-    /// 아래쪽 슬롯(표시 이름 「던전 1」)부터 순서대로 열립니다. unlockedSlotCount=1이면 slotIndex 2만 true.
+    /// 오른쪽 열(던전 1~3)은 아래부터, 왼쪽 던전 4는 4번째 해금 시 열립니다.
     /// </summary>
-    public bool IsSlotUnlocked(int slotIndex)
-    {
-        if (!IsValidSlotIndex(slotIndex))
-            return false;
+    public bool IsSlotUnlocked(int slotIndex) =>
+        DesktopOverlaySettings.IsDungeonSlotUnlocked(slotIndex, unlockedSlotCount);
 
-        return slotIndex >= GetFirstUnlockedSlotIndex(unlockedSlotCount);
-    }
-
-    public static bool IsSlotUnlockedForCount(int slotIndex, int slotCount)
-    {
-        if (slotIndex < 0 || slotIndex >= DesktopOverlaySettings.DungeonSlotCount)
-            return false;
-
-        return slotIndex >= GetFirstUnlockedSlotIndex(slotCount);
-    }
+    public static bool IsSlotUnlockedForCount(int slotIndex, int slotCount) =>
+        DesktopOverlaySettings.IsDungeonSlotUnlocked(slotIndex, slotCount);
 
     public bool TryUnlockNextSlot()
     {
@@ -185,9 +175,6 @@ public class GameManager : MonoBehaviour
 
     private static bool IsValidSlotIndex(int slotIndex) =>
         slotIndex >= 0 && slotIndex < DesktopOverlaySettings.DungeonSlotCount;
-
-    private static int GetFirstUnlockedSlotIndex(int slotCount) =>
-        DesktopOverlaySettings.DungeonSlotCount - Mathf.Clamp(slotCount, 1, DesktopOverlaySettings.DungeonSlotCount);
 
     private static DungeonSlotRuntimeState[] CreateDefaultSlots(int count)
     {

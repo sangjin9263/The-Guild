@@ -42,4 +42,8 @@ public static class GateGradeUtility
 
         return grade;
     }
+
+    public static string GetDisplayName(GateGrade grade) => OrderedNames[(int)grade];
+
+    public static bool IsAtLeast(GateGrade grade, GateGrade minGrade) => grade >= minGrade;
 }

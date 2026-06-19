@@ -4,15 +4,28 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>경매 Lot_List 스크롤 구성 및 Lot_prefab 정리 (gate_hint, input_gold, 10칸).</summary>
+/// <summary>경매 Lot_List 스크롤 구성 — Lot_prefab_ebay / Lot_prefab_eng 슬롯 배치.</summary>
 public static class AuctionPanelScrollSetup
 {
-    private const string LotPrefabPath = "Assets/Resources/Prefabs/UI/Lot_prefab.prefab";
+    private const string EbayLotPrefabPath = "Assets/Resources/Prefabs/UI/Lot_prefab_ebay.prefab";
+    private const string EngLotPrefabPath = "Assets/Resources/Prefabs/UI/Lot_prefab_eng.prefab";
     private const string AuctionPanelPath = "Assets/Resources/Prefabs/UI/AuctionPanel.prefab";
     private const int LotCount = 10;
     private const float LotHeight = 170f;
     private const float LotSpacing = 5f;
-    private const float LotWidth = 910f;
+
+    /// <summary>현재 풀 — Ebay/English 혼합. 슬롯 5+5 (Restore 메뉴).</summary>
+    private const int EnglishLotSlotCount = 5;
+
+    [MenuItem("The Guild/Data/Restore Auction Panel Lot Slots")]
+    public static void RestoreLotSlotsFromMenu()
+    {
+        FixLotPrefabs();
+        FixAuctionPanelScroll();
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log($"[AuctionPanel] Restored {LotCount} lot slots ({LotCount - EnglishLotSlotCount} ebay, {EnglishLotSlotCount} eng).");
+    }
 
     [MenuItem("Tools/Guild/Setup Auction Panel Scroll")]
     public static void SetupFromMenu()
@@ -23,24 +36,42 @@ public static class AuctionPanelScrollSetup
 
     public static void Setup()
     {
-        FixLotPrefab();
+        FixLotPrefabs();
         FixAuctionPanelScroll();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
     }
 
-    private static void FixLotPrefab()
+    private static void FixLotPrefabs()
     {
-        var lotRoot = PrefabUtility.LoadPrefabContents(LotPrefabPath);
+        FixEbayLotPrefab();
+        FixEngLotPrefabLayout();
+    }
+
+    private static void FixEbayLotPrefab()
+    {
+        var lotRoot = PrefabUtility.LoadPrefabContents(EbayLotPrefabPath);
+        if (lotRoot == null)
+        {
+            Debug.LogError($"AuctionPanelScrollSetup: missing {EbayLotPrefabPath}");
+            return;
+        }
+
         try
         {
-            var userGold = lotRoot.transform.Find("Bid/start_bid/user_gold");
+            var userGold = lotRoot.transform.Find("ebay/Bid/start_bid/user_gold");
+            if (userGold == null)
+                userGold = lotRoot.transform.Find("Bid/start_bid/user_gold");
+            if (userGold == null)
+                userGold = lotRoot.transform.Find("ebay/Bid/user_gold");
             if (userGold == null)
                 userGold = lotRoot.transform.Find("Bid/user_gold");
             if (userGold != null)
                 userGold.name = "input_gold";
 
-            var misnamedTime = lotRoot.transform.Find("Bid/input_gold");
+            var misnamedTime = lotRoot.transform.Find("ebay/Bid/input_gold");
+            if (misnamedTime == null)
+                misnamedTime = lotRoot.transform.Find("Bid/input_gold");
             if (misnamedTime != null && misnamedTime.GetComponentInChildren<TextMeshProUGUI>(true) != null)
             {
                 foreach (var label in misnamedTime.GetComponentsInChildren<TextMeshProUGUI>(true))
@@ -55,26 +86,10 @@ public static class AuctionPanelScrollSetup
 
             var energy = lotRoot.transform.Find("Gate_Info/Energy_Percent");
             if (energy != null)
-                EnsureGateHint(energy);
+                RemoveMisplacedGateHint(energy);
 
-            var rootRect = lotRoot.GetComponent<RectTransform>();
-            if (rootRect != null)
-            {
-                rootRect.anchorMin = new Vector2(0f, 1f);
-                rootRect.anchorMax = new Vector2(1f, 1f);
-                rootRect.pivot = new Vector2(0.5f, 1f);
-                rootRect.sizeDelta = new Vector2(0f, LotHeight);
-                rootRect.anchoredPosition = Vector2.zero;
-            }
-
-            var layoutElement = lotRoot.GetComponent<LayoutElement>();
-            if (layoutElement == null)
-                layoutElement = lotRoot.AddComponent<LayoutElement>();
-            layoutElement.preferredHeight = LotHeight;
-            layoutElement.minHeight = LotHeight;
-            layoutElement.flexibleWidth = 1f;
-
-            PrefabUtility.SaveAsPrefabAsset(lotRoot, LotPrefabPath);
+            ApplyLotCardLayout(lotRoot);
+            PrefabUtility.SaveAsPrefabAsset(lotRoot, EbayLotPrefabPath);
         }
         finally
         {
@@ -82,41 +97,65 @@ public static class AuctionPanelScrollSetup
         }
     }
 
-    private static void EnsureGateHint(Transform energyParent)
+    private static void FixEngLotPrefabLayout()
     {
-        var existing = energyParent.Find("gate_hint");
-        if (existing != null)
+        var lotRoot = PrefabUtility.LoadPrefabContents(EngLotPrefabPath);
+        if (lotRoot == null)
+        {
+            Debug.LogError($"AuctionPanelScrollSetup: missing {EngLotPrefabPath}");
             return;
+        }
 
-        var hintGo = new GameObject("gate_hint", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-        hintGo.transform.SetParent(energyParent, false);
-        hintGo.layer = energyParent.gameObject.layer;
+        try
+        {
+            if (lotRoot.GetComponent<EnglishAuctionLotRowView>() == null)
+                lotRoot.AddComponent<EnglishAuctionLotRowView>();
 
-        var rect = hintGo.GetComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0.5f, 0.5f);
-        rect.anchorMax = new Vector2(0.5f, 0.5f);
-        rect.pivot = new Vector2(0f, 0f);
-        rect.anchoredPosition = new Vector2(-150f, -12.5f);
-        rect.sizeDelta = new Vector2(300f, 25f);
+            ApplyLotCardLayout(lotRoot);
+            PrefabUtility.SaveAsPrefabAsset(lotRoot, EngLotPrefabPath);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(lotRoot);
+        }
+    }
 
-        var text = hintGo.GetComponent<TextMeshProUGUI>();
-        text.raycastTarget = false;
-        text.text = "으드득 거리는 소리가 들린다.";
-        text.fontSize = 18;
-        text.color = new Color(0.9372549f, 0.5058824f, 1f, 1f);
-        text.alignment = TextAlignmentOptions.MidlineLeft;
-        text.enableWordWrapping = true;
-        text.overflowMode = TextOverflowModes.Ellipsis;
+    private static void ApplyLotCardLayout(GameObject lotRoot)
+    {
+        var rootRect = lotRoot.GetComponent<RectTransform>();
+        if (rootRect != null)
+        {
+            rootRect.anchorMin = new Vector2(0f, 1f);
+            rootRect.anchorMax = new Vector2(1f, 1f);
+            rootRect.pivot = new Vector2(0.5f, 1f);
+            rootRect.sizeDelta = new Vector2(0f, LotHeight);
+            rootRect.anchoredPosition = Vector2.zero;
+        }
 
-        var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(
-            "Assets/Store/HONETi/FlatBlackUniversalGUI/Fonts/Galmuri-v2.40.3/Galmuri11 SDF.asset");
-        if (font != null)
-            text.font = font;
+        var layoutElement = lotRoot.GetComponent<LayoutElement>();
+        if (layoutElement == null)
+            layoutElement = lotRoot.AddComponent<LayoutElement>();
+        layoutElement.preferredHeight = LotHeight;
+        layoutElement.minHeight = LotHeight;
+        layoutElement.flexibleWidth = 1f;
+    }
+
+    private static void RemoveMisplacedGateHint(Transform energyParent)
+    {
+        var misplaced = energyParent.Find("gate_hint");
+        if (misplaced != null)
+            Object.DestroyImmediate(misplaced.gameObject);
     }
 
     private static void FixAuctionPanelScroll()
     {
         var panelRoot = PrefabUtility.LoadPrefabContents(AuctionPanelPath);
+        if (panelRoot == null)
+        {
+            Debug.LogError($"AuctionPanelScrollSetup: missing {AuctionPanelPath}");
+            return;
+        }
+
         try
         {
             var lotList = panelRoot.transform.Find("Content/Lot_List") as RectTransform;
@@ -126,10 +165,17 @@ public static class AuctionPanelScrollSetup
                 return;
             }
 
-            var lotPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(LotPrefabPath);
-            if (lotPrefab == null)
+            var ebayPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(EbayLotPrefabPath);
+            var engPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(EngLotPrefabPath);
+            if (ebayPrefab == null)
             {
-                Debug.LogError("AuctionPanelScrollSetup: Lot_prefab not found.");
+                Debug.LogError($"AuctionPanelScrollSetup: missing {EbayLotPrefabPath}");
+                return;
+            }
+
+            if (EnglishLotSlotCount > 0 && engPrefab == null)
+            {
+                Debug.LogError($"AuctionPanelScrollSetup: missing {EngLotPrefabPath}");
                 return;
             }
 
@@ -188,10 +234,16 @@ public static class AuctionPanelScrollSetup
 
             ClearLotListChildren(lotList, viewport, scrollbar, content);
 
+            var engSlots = Mathf.Clamp(EnglishLotSlotCount, 0, LotCount);
+            var ebaySlots = LotCount - engSlots;
+
             for (var i = 0; i < LotCount; i++)
             {
-                var instance = (GameObject)PrefabUtility.InstantiatePrefab(lotPrefab, content);
-                instance.name = $"Lot_{i + 1}";
+                var useEng = i >= ebaySlots;
+                var prefab = useEng ? engPrefab : ebayPrefab;
+                var suffix = useEng ? "eng" : "ebay";
+                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, content);
+                instance.name = $"Lot_{i + 1}_{suffix}";
             }
 
             var scrollRect = lotList.GetComponent<ScrollRect>();
@@ -206,6 +258,8 @@ public static class AuctionPanelScrollSetup
             scrollRect.verticalScrollbar = scrollbar.GetComponent<Scrollbar>();
             scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
             scrollRect.horizontalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+
+            EnsureStartAuctionModalChild(panelRoot);
 
             var lotListImage = lotList.GetComponent<Image>();
             if (lotListImage != null)
@@ -295,6 +349,35 @@ public static class AuctionPanelScrollSetup
         target.anchorMax = Vector2.one;
         target.offsetMin = new Vector2(horizontalPadding, verticalPadding);
         target.offsetMax = new Vector2(-horizontalPadding, -verticalPadding);
+    }
+
+    private static void EnsureStartAuctionModalChild(GameObject panelRoot)
+    {
+        const string modalPath = "Assets/Resources/Prefabs/UI/start_auction.prefab";
+        if (panelRoot.transform.Find("start_auction") != null)
+            return;
+
+        var modalPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(modalPath);
+        if (modalPrefab == null)
+        {
+            Debug.LogWarning($"AuctionPanelScrollSetup: missing {modalPath}");
+            return;
+        }
+
+        var instance = (GameObject)PrefabUtility.InstantiatePrefab(modalPrefab, panelRoot.transform);
+        instance.name = "start_auction";
+        var rect = instance.GetComponent<RectTransform>();
+        if (rect != null)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
+        }
+
+        instance.SetActive(false);
     }
 }
 #endif

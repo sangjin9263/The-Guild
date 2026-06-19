@@ -19,40 +19,46 @@ function note(text) {
 
 const ALL_GRADES = ["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"];
 const TIER_WEIGHT_PERCENT = [60, 30, 10];
+const ENERGY_PERCENT_MAX = 200;
+const ENERGY_ROLL_STEP = 5;
+/** tier_id가 이 값이면 English (등급 무관). */
+const ENGLISH_TIER_ID = 2;
+/** 이 등급 이상이면 tier 무관 English. */
+const ENGLISH_MIN_GRADE = "S";
+
+const ARCHETYPES = ["gold", "mineral", "equipment", "artifact", "mutation"];
+const ARCHETYPE_WEIGHT_SUM_COLUMN = "#weight_sum";
 
 const UNLOCK_CONFIG = [
   {
     level: 1,
     maxGrade: "B",
-    energyBarMax: 100,
     auctionTabs: "grade_only",
-    notes: note("F~B 해금, spawn 피크 F~D"),
+    notes: note(
+      `F~B 해금 · 최대 에너지=${ENERGY_PERCENT_MAX} (에너지 %=energy/${ENERGY_PERCENT_MAX})`,
+    ),
   },
   {
     level: 2,
     maxGrade: "A",
-    energyBarMax: 130,
     auctionTabs: "grade_only",
     notes: "",
   },
   {
     level: 3,
     maxGrade: "S",
-    energyBarMax: 170,
     auctionTabs: "grade_only",
     notes: note("spawn 피크 C~B"),
   },
   {
     level: 4,
     maxGrade: "SS",
-    energyBarMax: 230,
     auctionTabs: "grade_and_unified",
     notes: note("통합 경매장 해금, spawn 피크 B~A"),
   },
   {
     level: 5,
     maxGrade: "SSS",
-    energyBarMax: 300,
     auctionTabs: "grade_and_unified",
     notes: note("spawn 피크 B~A, SSS 희귀"),
   },
@@ -76,7 +82,6 @@ function buildUnlockRows() {
     "building_level",
     "unlocked_grades",
     "max_unlocked_grade",
-    "energy_bar_max",
     "auction_tabs",
     NOTES_COLUMN,
   ];
@@ -84,11 +89,84 @@ function buildUnlockRows() {
     cfg.level,
     gradesUpTo(cfg.maxGrade).join(","),
     cfg.maxGrade,
-    cfg.energyBarMax,
     cfg.auctionTabs,
     cfg.notes,
   ]);
   return [header, ...rows];
+}
+
+/** @type {Record<string, number>} */
+const ARTIFACT_WEIGHT_BY_GRADE = {
+  F: 0,
+  E: 0,
+  D: 0,
+  C: 3,
+  B: 3,
+  A: 5,
+  S: 7,
+  SS: 9,
+  SSS: 10,
+};
+
+/** @returns {Record<string, number>} */
+function archetypeWeightsFor(grade, tierId) {
+  const gradeIdx = ALL_GRADES.indexOf(grade);
+  const artifact = ARTIFACT_WEIGHT_BY_GRADE[grade] ?? 0;
+
+  let gold = 35;
+  let mineral = 25;
+  let equipment = 25;
+  let mutation = 10;
+
+  if (artifact === 0) {
+    // F~D: 유물 없음 — 빠진 5% → gold +3, mineral +2
+    gold += 3;
+    mineral += 2;
+  } else {
+    // C~SSS: 등급별 artifact, 기본 5% 대비 gold 조정
+    gold += 5 - artifact;
+  }
+
+  // F~D tier2: 광물·장비 ↑ (역전 스파이스용)
+  if (tierId === 2 && gradeIdx <= 2) {
+    gold -= 10;
+    mineral += 5;
+    equipment += 5;
+  }
+
+  return { gold, mineral, equipment, artifact, mutation };
+}
+
+function buildArchetypeRows() {
+  const header = [
+    "grade",
+    "tier_id",
+    "archetype",
+    "weight",
+    ARCHETYPE_WEIGHT_SUM_COLUMN,
+    NOTES_COLUMN,
+  ];
+  const rows = [header];
+
+  for (const grade of ALL_GRADES) {
+    for (let tierId = 0; tierId < 3; tierId++) {
+      const weights = archetypeWeightsFor(grade, tierId);
+      const sum = Object.values(weights).reduce((a, b) => a + b, 0);
+
+      for (const archetype of ARCHETYPES) {
+        rows.push([
+          grade,
+          tierId,
+          archetype,
+          weights[archetype],
+          sum,
+          archetype === "gold" ? note("보상 상세 → Dungeoninfo") : "",
+        ]);
+      }
+    }
+  }
+
+  return rows;
 }
 
 function buildSpawnWeightRows() {
@@ -111,87 +189,155 @@ function buildSpawnWeightRows() {
   return rows;
 }
 
+function resolveBidType(grade, tierId) {
+  const gradeIdx = ALL_GRADES.indexOf(grade);
+  const minIdx = ALL_GRADES.indexOf(ENGLISH_MIN_GRADE);
+  if (tierId === ENGLISH_TIER_ID) return "English";
+  if (gradeIdx >= minIdx) return "English";
+  return "Ebay";
+}
+
+/** @deprecated GateEnergyTiers.auction_type_override — resolveBidType 과 동일 */
+const resolveAuctionTypeOverride = resolveBidType;
+
+function auctionTypeNote(grade, tierId) {
+  if (tierId === ENGLISH_TIER_ID)
+    return note(`tier${ENGLISH_TIER_ID} → English`);
+  const gradeIdx = ALL_GRADES.indexOf(grade);
+  const minIdx = ALL_GRADES.indexOf(ENGLISH_MIN_GRADE);
+  if (gradeIdx >= minIdx)
+    return note(`${ENGLISH_MIN_GRADE}+ → English`);
+  return "";
+}
+
 function tierRow(
   grade,
   tierId,
-  band,
   energyMin,
   energyMax,
   notes = "",
 ) {
+  const auctionOverride = resolveAuctionTypeOverride(grade, tierId);
+  const typeNote = auctionTypeNote(grade, tierId);
+  const combinedNotes = [notes, typeNote].filter(Boolean).join(" · ");
   return [
     grade,
     tierId,
-    band,
     energyMin,
     energyMax,
     TIER_WEIGHT_PERCENT[tierId],
     tierId + 1,
-    "",
-    notes,
+    auctionOverride,
+    combinedNotes,
   ];
 }
 
 const README = [
-  ["Gateinfo — 던전 게이트 데이터"],
+  ["Gateinfo — 입장권·경매장 데이터"],
   [""],
   ["Import 규칙:"],
-  ["  · 시트 이름이 # 로 시작하면 전체 시트 스킵 (이 시트 #ReadMe 포함)"],
-  ["  · 컬럼 이름이 # 로 시작하면 해당 컬럼 전체 스킵 (아래 셀 값도 Import 안 함)"],
-  ["  · 예: #notes, #spawn_weight_sum — Excel에서만 보는 검증/메모용"],
+  ["  · 시트/컬럼 이름이 # 으로 시작하면 Import 스킵 (#ReadMe, #gap 등)"],
   [""],
-  ["데이터 시트:"],
-  ["  GateGrades / GateEnergyTiers / GateHints / GateAuctionEconomy"],
+  ["Import 시트 (순서 무관):"],
+  ["  GateConstants / GateGradeBands / GateGrades / GateEnergyTiers"],
+  ["  Auction / EnglishTimerTiers / EnglishAiBehavior / GateBrokerHints / GateArchetypes / GateBrokerPricing"],
   ["  GateUnlock / GateSpawnWeights"],
   [""],
-  ["경매 (코드): energy<=100 Ebay, energy>100 English, override 우선"],
-  ["energy 롤 (코드): 100 미만 step 5 | 100 이상 10 단위 (Excel 컬럼 없음)"],
+  ["던전 보상 (드랍·클리어 골드·mutation) → Dungeoninfo.xlsx"],
+  ["아이템 마스터 → Iteminfo.xlsx"],
+  [""],
+  [`에너지 %: energy / ${ENERGY_PERCENT_MAX} × 100 (GateConstants.energy_percent_max)`],
+  [`  energy 롤: ${ENERGY_ROLL_STEP} 단위 고정 (min~max, 등급·구간 무관)`],
+  ["  F tier0만 5~25 (폭 20) · SSS tier2 = 200 고정"],
+  ["  tier2(N) = tier0(N+1) 브릿지 · 같은 tier_id면 상위 등급 energy 구간이 더 높음"],
+  ["  건물 Lv와 무관 — 같은 Lot은 항상 같은 %"],
+  [""],
+  ["Lot 생성 순서 (코드):"],
+  ["  1. GateSpawnWeights → grade"],
+  ["  2. GateEnergyTiers → tier → energy 롤"],
+  ["  3. GateArchetypes → 주 성향 (입장권 라벨)"],
+  ["  4. Auction[grade,tier] → bid_type · bid_band · ai_count (English/Ebay 공용 lookup)"],
+  ["  5. bid_type: tier2 → English | S+ 등급 → English · 그 외 Ebay"],
+  [""],
+  ["경매 UI:"],
+  ["  · 무료 힌트 없음 — 등급 + 에너지 % + 입찰가"],
+  ["  · 정보상: GateBrokerPricing + GateBrokerHints (tier_id)"],
+  [""],
+  ["GateBrokerHints:"],
+  ["  archetype × tier_id(0~2) · up_arrow = tier_id + 1"],
+  [""],
+  ["GateArchetypes:"],
+  ["  artifact F~D=0 | C=3 | B=3 | A=5 | S=7 | SS=9 | SSS=10"],
+  ["  F~D tier2: mineral/equipment ↑ · weight 합=100"],
+  [""],
+  ["Auction:"],
+  ["  grade × tier_id · bid_type(English/Ebay) · bid_band_min~max · ai_count_min~max"],
+  ["  · bid_type 규칙 = GateConstants english_min_grade / english_tier_id 와 동일"],
+  ["  · opening_bid·입찰가·힌트: bid_band (Ebay·English 공용)"],
+  ["  · English: ai_count rnd → 카드 AI N명 · Ebay: 결과 AI 3명(코드 고정)"],
+  [""],
+  ["EnglishTimerTiers:"],
+  ["  bid_count_gt 초과 시 timer_sec 적용 (내림차순 매칭)"],
+  ["  · 0→60초(1분) · 4→45 · 7→30 · 10→15"],
+  [""],
+  ["EnglishAiBehavior:"],
+  ["  grade별 English 라이브 AI 입찰 패턴 (Ebay 미사용)"],
+  ["  · 1회 입찰 = step_count rnd × english_bid_increment"],
+  ["  · 유저가 방금 1등이면 + player_counter_step rnd (추가 step)"],
+  ["  · react_delay 후 counter_bid_chance% 로 입찰 시도 · 상한 english_ai_max_steps_per_bid"],
+  [""],
+  ["GateConstants (경매 규칙):"],
+  [`  english_min_grade (${ENGLISH_MIN_GRADE}+ → English)`],
+  [`  english_tier_id (tier${ENGLISH_TIER_ID} → English, 등급 무관)`],
+  ["  ebay_bid_increment · english_bid_increment (없으면 ebay와 동일)"],
+  ["  english_ai_max_steps_per_bid · english_ai_eval_interval_sec"],
+  [""],
+  ["GateEnergyTiers.auction_type_override:"],
+  ["  · 행별 English/Ebay — 코드 규칙과 동기 (수동 override 가능)"],
   [""],
   ["해금: Lv1 F~B | Lv2 F~A | Lv3 F~S | Lv4 F~SS | Lv5 F~SSS"],
-  [""],
-  ["spawn 순서:"],
-  ["  1. GateSpawnWeights → grade (합 100)"],
-  ["  2. GateEnergyTiers.tier_weight → tier (60/30/10 %)"],
-  ["  3. energy 롤 → auction → GateHints"],
   [""],
   ["재생성: node Tools/create_gateinfo_excel.mjs"],
 ];
 
+const GRADE_ICON_NOTE = note(
+  "icon_sprite 비움=자동(gate_img_auction/{grade}). 값 있으면 해당 슬라이스 이름으로 override",
+);
+
 const GRADES = [
-  ["grade", "energy_min", "energy_max", "grade_band", NOTES_COLUMN],
-  ["F", 40, 70, "하위", ""],
-  ["E", 50, 80, "하위", ""],
-  ["D", 60, 90, "하위", ""],
-  ["C", 70, 100, "중위", ""],
-  ["B", 80, 150, "중위", ""],
-  ["A", 90, 170, "중위", note("tier0 110+ English")],
-  ["S", 100, 200, "상위", note("100=Ebay only")],
-  ["SS", 150, 250, "상위", ""],
-  ["SSS", 200, 300, "최상위", ""],
+  ["grade", "icon_sprite", NOTES_COLUMN],
+  ["F", "", GRADE_ICON_NOTE],
+  ["E", "", note("icon_sprite 비움 → gate_img_auction E 슬라이스")],
+  ["D", "", note("icon_sprite 비움 → gate_img_auction D 슬라이스")],
+  ["C", "", note("icon_sprite 비움 → gate_img_auction C 슬라이스")],
+  ["B", "", note("icon_sprite 비움 → gate_img_auction B 슬라이스")],
+  ["A", "", note("icon_sprite 비움 → gate_img_auction A 슬라이스")],
+  ["S", "", note("icon_sprite 비움 → gate_img_auction S 슬라이스")],
+  ["SS", "", note("icon_sprite 비움 → gate_img_auction SS 슬라이스")],
+  ["SSS", "", note("icon_sprite 비움 → gate_img_auction SSS 슬라이스")],
 ];
 
 const ENERGY_TIER_RANGES = [
-  ["F", "하위", [40, 50], [55, 60], [65, 70]],
-  ["E", "하위", [50, 60], [65, 70], [75, 80]],
-  ["D", "하위", [60, 70], [75, 80], [85, 90]],
-  ["C", "중위", [70, 80], [85, 90], [95, 100]],
-  ["B", "중위", [80, 100], [110, 130], [140, 150]],
-  ["A", "중위", [90, 120], [130, 150], [160, 170]],
-  ["S", "상위", [100, 150], [160, 180], [190, 200]],
-  ["SS", "상위", [150, 200], [210, 230], [240, 250]],
-  ["SSS", "최상위", [200, 240], [250, 290], [290, 300]],
+  ["F", [5, 25], [30, 35], [40, 45]],
+  ["E", [40, 45], [50, 55], [60, 65]],
+  ["D", [60, 65], [70, 75], [80, 85]],
+  ["C", [80, 85], [90, 95], [100, 105]],
+  ["B", [100, 105], [110, 115], [120, 125]],
+  ["A", [120, 125], [130, 135], [140, 145]],
+  ["S", [140, 145], [150, 155], [160, 165]],
+  ["SS", [160, 165], [170, 175], [180, 185]],
+  ["SSS", [180, 185], [190, 195], [200, 200]],
 ];
 
 const ENERGY_TIER_NOTES = {
-  "A,0": note("110~120 롤 시 English (100+ 는 10단위)"),
-  "S,0": note("energy=100 일 때만 Ebay"),
+  "F,0": note("F tier0만 5~25 (입문 분산)"),
+  "SSS,2": note("tier2 energy 200 고정 (100%)"),
 };
 
 const ENERGY_TIERS = [
   [
     "grade",
     "tier_id",
-    "grade_band",
     "energy_min",
     "energy_max",
     "tier_weight",
@@ -199,129 +345,423 @@ const ENERGY_TIERS = [
     "auction_type_override",
     NOTES_COLUMN,
   ],
-  ...ENERGY_TIER_RANGES.flatMap(([grade, band, t0, t1, t2]) => [
-    tierRow(grade, 0, band, t0[0], t0[1], ENERGY_TIER_NOTES[`${grade},0`] ?? ""),
-    tierRow(grade, 1, band, t1[0], t1[1]),
-    tierRow(grade, 2, band, t2[0], t2[1]),
+  ...ENERGY_TIER_RANGES.flatMap(([grade, t0, t1, t2]) => [
+    tierRow(grade, 0, t0[0], t0[1], ENERGY_TIER_NOTES[`${grade},0`] ?? ""),
+    tierRow(grade, 1, t1[0], t1[1]),
+    tierRow(grade, 2, t2[0], t2[1]),
   ]),
 ];
 
-const HINTS = [
-  [
-    "energy_min",
-    "energy_max",
-    "hint_display1",
-    "hint_display2",
-    "hint_display3",
-    NOTES_COLUMN,
-  ],
-  [40, 50, "조용하다.", "아무 일 없어 보인다.", "바람만 스친다.", ""],
-  [55, 60, "무난하다.", "평범한 느낌의 던전이다.", "특별할 것 없다.", ""],
-  [
-    65,
-    70,
-    "미세한 기운이 느껴진다.",
-    "살짝 싸한 냄새가 난다.",
-    "기운이 스친다.",
-    "",
-  ],
-  [75, 80, "피부가 따끔하다.", "어딘가 어수선하다.", "거센 기운이 스친다.", ""],
-  [85, 90, "안이 울리는 느낌이다.", "공기가 무거워진다.", "귀가 먹먹하다.", ""],
-  [95, 100, "신경이 곤두선다.", "압박이 느껴진다.", "뭔가 잘못됐다.", ""],
-  [
-    110,
-    130,
-    "으드득거리는 소리가 난다.",
-    "숨이 가빠진다.",
-    "안개가 맴돈다.",
-    "",
-  ],
-  [
-    140,
-    150,
-    "불안한 예감이 든다.",
-    "뒤통수가 서늘하다.",
-    "누가 보고 있다.",
-    "",
-  ],
-  [160, 180, "땅이 울린다.", "공기가 떨린다.", "심장이 빨라진다.", ""],
-  [
-    190,
-    200,
-    "가슴이 조여든다.",
-    "소름이 돋는 기운이다.",
-    "다리가 무거워진다.",
-    "",
-  ],
-  [
-    210,
-    230,
-    "도망치고 싶어진다.",
-    "본능이 경계한다.",
-    "이유를 모르게 두렵다.",
-    "",
-  ],
-  [240, 249, "발이 떨어지지 않는다.", "숨이 막힌다.", "시야가 좁아진다.", ""],
-  [250, 290, "불길한 기운이다.", "맥이 끊긴다.", "돌이킬 수 없다.", ""],
-  [300, 300, "무언가 있다.", "끝이 보이지 않는다.", "가까이 있다.", ""],
+/** @type {Record<string, [number, number]>} grade → [ai_count_min, ai_count_max] (English 카드 표시용) */
+const AI_COUNT_BY_GRADE = {
+  F: [2, 3],
+  E: [2, 3],
+  D: [3, 4],
+  C: [3, 4],
+  B: [3, 5],
+  A: [4, 5],
+  S: [4, 6],
+  SS: [5, 7],
+  SSS: [6, 8],
+};
+
+/** bid_count_gt 초과 시 timer_sec (English 라이브 경매) */
+const ENGLISH_TIMER_TIERS = [
+  [0, 60, note("시작 1분 · bid count ≤4")],
+  [4, 45, note("bid count >4 → 45초")],
+  [7, 30, note("bid count >7 → 30초")],
+  [10, 15, note("bid count >10 → 15초")],
 ];
 
-const ECONOMY = [
-  [
+/** @type {[string, number, number, number, string][]} grade, tier_id, min, max, notes */
+const AUCTION_RAW = [
+  ["F", 0, 30, 50, ""],
+  ["F", 1, 50, 70, ""],
+  ["F", 2, 70, 100, ""],
+  ["E", 0, 50, 80, ""],
+  ["E", 1, 80, 120, ""],
+  ["E", 2, 120, 160, ""],
+  ["D", 0, 100, 150, ""],
+  ["D", 1, 150, 220, ""],
+  ["D", 2, 220, 320, ""],
+  ["C", 0, 180, 260, ""],
+  ["C", 1, 260, 360, ""],
+  ["C", 2, 360, 500, ""],
+  ["B", 0, 280, 380, ""],
+  ["B", 1, 380, 500, ""],
+  ["B", 2, 500, 700, ""],
+  ["A", 0, 400, 550, ""],
+  ["A", 1, 550, 750, ""],
+  ["A", 2, 750, 1000, ""],
+  ["S", 0, 600, 850, ""],
+  ["S", 1, 850, 1150, ""],
+  ["S", 2, 1150, 1600, ""],
+  ["SS", 0, 900, 1250, ""],
+  ["SS", 1, 1250, 1700, ""],
+  ["SS", 2, 1700, 2300, ""],
+  ["SSS", 0, 1400, 1900, ""],
+  ["SSS", 1, 1900, 2600, ""],
+  ["SSS", 2, 2600, 3500, ""],
+];
+
+function buildAuctionRows() {
+  const header = [
     "grade",
     "tier_id",
-    "starting_price_min",
-    "starting_price_max",
-    "reward_gold_min",
-    "reward_gold_max",
-    "clear_time_sec",
-    "ebay_duration_sec",
-    "bid_increment",
-    "english_round_sec",
+    "bid_type",
+    "bid_band_min",
+    "bid_band_max",
+    "ai_count_min",
+    "ai_count_max",
+    NOTES_COLUMN,
+  ];
+
+  return [
+    header,
+    ...AUCTION_RAW.map(([grade, tierId, bandMin, bandMax, extraNotes]) => {
+      const bidType = resolveBidType(grade, tierId);
+      const [aiMin, aiMax] = AI_COUNT_BY_GRADE[grade];
+      const typeNote = auctionTypeNote(grade, tierId);
+      const aiNote =
+        bidType === "English"
+          ? note(`English AI ${aiMin}~${aiMax}명 rnd · 플레이어 제외`)
+          : note("Ebay · ai_count 미사용(결과 AI 3명 코드 고정)");
+      const combinedNotes = [extraNotes, typeNote, aiNote].filter(Boolean).join(" · ");
+      return [grade, tierId, bidType, bandMin, bandMax, aiMin, aiMax, combinedNotes];
+    }),
+  ];
+}
+
+function buildEnglishTimerTierRows() {
+  return [
+    ["bid_count_gt", "timer_sec", NOTES_COLUMN],
+    ...ENGLISH_TIMER_TIERS.map(([bidCountGt, timerSec, notes]) => [
+      bidCountGt,
+      timerSec,
+      notes,
+    ]),
+  ];
+}
+
+/**
+ * English 라이브 AI 1회 입찰량 (step × english_bid_increment):
+ *   steps = rnd(step_count_min, step_count_max)
+ *   + (유저가 현재 1등이면 rnd(player_counter_step_min, player_counter_step_max))
+ *   → min(..., english_ai_max_steps_per_bid)
+ *   new_bid = min(current_high + steps × increment, bid_band_max)
+ *
+ * @type {Record<string, {
+ *   stepMin: number, stepMax: number,
+ *   playerCounterMin: number, playerCounterMax: number,
+ *   reactMin: number, reactMax: number,
+ *   counterChance: number,
+ *   notes?: string
+ * }>}
+ */
+const ENGLISH_AI_BEHAVIOR_BY_GRADE = {
+  F: {
+    stepMin: 1,
+    stepMax: 2,
+    playerCounterMin: 0,
+    playerCounterMax: 1,
+    reactMin: 10,
+    reactMax: 18,
+    counterChance: 35,
+    notes: note("저가·소극 · +5~15G"),
+  },
+  E: {
+    stepMin: 1,
+    stepMax: 2,
+    playerCounterMin: 0,
+    playerCounterMax: 1,
+    reactMin: 9,
+    reactMax: 16,
+    counterChance: 40,
+  },
+  D: {
+    stepMin: 1,
+    stepMax: 3,
+    playerCounterMin: 1,
+    playerCounterMax: 2,
+    reactMin: 8,
+    reactMax: 14,
+    counterChance: 45,
+    notes: note("유저 역입찰 시 +1~2 step"),
+  },
+  C: {
+    stepMin: 1,
+    stepMax: 3,
+    playerCounterMin: 1,
+    playerCounterMax: 2,
+    reactMin: 7,
+    reactMax: 12,
+    counterChance: 50,
+  },
+  B: {
+    stepMin: 2,
+    stepMax: 4,
+    playerCounterMin: 1,
+    playerCounterMax: 3,
+    reactMin: 6,
+    reactMax: 11,
+    counterChance: 55,
+    notes: note("+10~35G · 중급"),
+  },
+  A: {
+    stepMin: 2,
+    stepMax: 4,
+    playerCounterMin: 2,
+    playerCounterMax: 3,
+    reactMin: 5,
+    reactMax: 10,
+    counterChance: 60,
+  },
+  S: {
+    stepMin: 2,
+    stepMax: 5,
+    playerCounterMin: 2,
+    playerCounterMax: 4,
+    reactMin: 4,
+    reactMax: 9,
+    counterChance: 68,
+    notes: note("S+ Eng · +10~45G"),
+  },
+  SS: {
+    stepMin: 3,
+    stepMax: 6,
+    playerCounterMin: 2,
+    playerCounterMax: 4,
+    reactMin: 3,
+    reactMax: 8,
+    counterChance: 75,
+  },
+  SSS: {
+    stepMin: 3,
+    stepMax: 8,
+    playerCounterMin: 3,
+    playerCounterMax: 5,
+    reactMin: 2,
+    reactMax: 6,
+    counterChance: 82,
+    notes: note("최상 · +15~65G · 빠른 반응"),
+  },
+};
+
+function buildEnglishAiBehaviorRows() {
+  const header = [
+    "grade",
+    "step_count_min",
+    "step_count_max",
+    "player_counter_step_min",
+    "player_counter_step_max",
+    "react_delay_sec_min",
+    "react_delay_sec_max",
+    "counter_bid_chance_pct",
+    NOTES_COLUMN,
+  ];
+
+  return [
+    header,
+    ...ALL_GRADES.map((grade) => {
+      const row = ENGLISH_AI_BEHAVIOR_BY_GRADE[grade];
+      return [
+        grade,
+        row.stepMin,
+        row.stepMax,
+        row.playerCounterMin,
+        row.playerCounterMax,
+        row.reactMin,
+        row.reactMax,
+        row.counterChance,
+        row.notes ?? "",
+      ];
+    }),
+  ];
+}
+
+const GRADE_BAND_BY_GRADE = {
+  F: "low",
+  E: "low",
+  D: "mid",
+  C: "mid",
+  B: "mid",
+  A: "high",
+  S: "high",
+  SS: "top",
+  SSS: "top",
+};
+
+/** @type {Record<string, number>} */
+const BROKER_PRICING_PCT = {
+  F: 8,
+  E: 8,
+  D: 7,
+  C: 7,
+  B: 6,
+  A: 6,
+  S: 5,
+  SS: 5,
+  SSS: 5,
+};
+
+function buildConstantsRows() {
+  return [
+    ["key", "value", NOTES_COLUMN],
+    [
+      "energy_percent_max",
+      String(ENERGY_PERCENT_MAX),
+      note("에너지 % = energy / value × 100"),
+    ],
+    [
+      "english_min_grade",
+      ENGLISH_MIN_GRADE,
+      note("이 등급 이상 → English (tier 무관)"),
+    ],
+    [
+      "english_tier_id",
+      String(ENGLISH_TIER_ID),
+      note("이 tier_id → English (등급 무관)"),
+    ],
+    ["ebay_bid_increment", "5", note("Ebay 입찰 ± step")],
+    [
+      "english_bid_increment",
+      "5",
+      note("English 입찰 최소 상향 단위 · Import 시 없으면 ebay와 동일"),
+    ],
+    [
+      "english_ai_max_steps_per_bid",
+      "8",
+      note("AI 1회 입찰 step 상한 (× increment)"),
+    ],
+    [
+      "english_ai_eval_interval_sec",
+      "1",
+      note("AI 입찰 판정 폴링 간격(초)"),
+    ],
+  ];
+}
+
+function buildGradeBandRows() {
+  return [
+    ["grade", "grade_band", NOTES_COLUMN],
+    ...ALL_GRADES.map((grade) => [
+      grade,
+      GRADE_BAND_BY_GRADE[grade],
+      grade === "F" ? GRADE_BAND_NOTE : "",
+    ]),
+  ];
+}
+
+function buildBrokerPricingRows() {
+  return [
+    ["grade", "hint_cost_pct_of_min_bid", NOTES_COLUMN],
+    ...ALL_GRADES.map((grade) => [
+      grade,
+      BROKER_PRICING_PCT[grade],
+      grade === "F"
+        ? note("힌트 가격 ≈ bid_band_min × pct / 100 (Lot당 1회)")
+        : "",
+    ]),
+  ];
+}
+
+const GRADE_BAND_NOTE = note("low=F~E | mid=D~B | high=A~S | top=SS~SSS");
+
+const HINT_INFO_BY_ARCHETYPE = {
+  gold: "골드 보상",
+  mineral: "광물 보상",
+  equipment: "장비 보상",
+  artifact: "유물 보상",
+  mutation: "변이 보상",
+};
+
+const UP_ARROW_BY_TIER_ID = [1, 2, 3];
+
+function brokerHintRow(archetype, tierId, hintText, notes = "") {
+  return [
+    archetype,
+    tierId,
+    hintText,
+    HINT_INFO_BY_ARCHETYPE[archetype] ?? "",
+    UP_ARROW_BY_TIER_ID[tierId] ?? 1,
+    notes,
+  ];
+}
+
+/** 정보상 유료 힌트 — 5성향 × tier_id(0~2) */
+const BROKER_HINTS = [
+  [
+    "archetype",
+    "tier_id",
+    "hint_text",
+    "hint_info",
+    "up_arrow",
     NOTES_COLUMN,
   ],
-  ["F", 0, 30, 50, 80, 150, 1200, 60, 5, 15, ""],
-  ["F", 1, 50, 70, 120, 200, 1500, 60, 8, 15, ""],
-  ["F", 2, 70, 100, 150, 280, 1800, 75, 10, 15, ""],
-  ["E", 0, 50, 80, 100, 200, 1800, 60, 10, 15, ""],
-  ["E", 1, 80, 120, 150, 300, 2400, 75, 15, 15, ""],
-  ["E", 2, 120, 160, 220, 380, 2700, 75, 15, 15, ""],
-  ["D", 0, 100, 150, 200, 400, 2400, 60, 15, 15, ""],
-  ["D", 1, 150, 220, 350, 550, 3000, 75, 20, 15, ""],
-  ["D", 2, 220, 320, 500, 800, 3600, 90, 25, 15, ""],
-  ["C", 0, 180, 260, 400, 700, 3000, 60, 25, 15, ""],
-  ["C", 1, 260, 360, 600, 950, 3600, 75, 30, 15, ""],
-  ["C", 2, 360, 500, 850, 1300, 4200, 90, 40, 15, ""],
-  ["B", 0, 280, 380, 500, 900, 3600, 60, 30, 15, ""],
-  ["B", 1, 380, 500, 750, 1100, 4200, 75, 40, 15, ""],
-  ["B", 2, 500, 700, 900, 1400, 4800, 90, 50, 15, ""],
-  ["A", 0, 400, 550, 800, 1200, 4200, 60, 40, 15, ""],
-  ["A", 1, 550, 750, 1100, 1600, 4800, 75, 50, 15, ""],
-  ["A", 2, 750, 1000, 1500, 2200, 5400, 90, 75, 15, ""],
-  ["S", 0, 600, 850, 1200, 1800, 4800, 90, 60, 15, ""],
-  ["S", 1, 850, 1150, 1700, 2500, 5400, 90, 80, 15, ""],
-  ["S", 2, 1150, 1600, 2400, 3500, 6000, 90, 100, 15, ""],
-  ["SS", 0, 900, 1250, 1800, 2700, 5400, 90, 80, 15, ""],
-  ["SS", 1, 1250, 1700, 2600, 3800, 6000, 90, 100, 15, ""],
-  ["SS", 2, 1700, 2300, 3600, 5200, 6600, 90, 125, 15, ""],
-  ["SSS", 0, 1400, 1900, 2800, 4200, 6000, 90, 100, 15, ""],
-  ["SSS", 1, 1900, 2600, 4000, 5800, 6600, 90, 125, 15, ""],
-  ["SSS", 2, 2600, 3500, 5500, 8000, 7200, 90, 150, 15, ""],
+  brokerHintRow("gold", 0, "월급은 줄 수 있겠네요.", note("tier0")),
+  brokerHintRow("gold", 1, "이 정도면 입찰가 좀 올려도 되겠는데요?"),
+  brokerHintRow("gold", 2, "길드장님, 이건 다들 탐내는 물건입니다."),
+  brokerHintRow("mineral", 0, "땅은 나쁘지 않습니다."),
+  brokerHintRow("mineral", 1, "경호원보다 곡괭이가 더 필요할지도 모릅니다."),
+  brokerHintRow("mineral", 2, "이 정도면 광산이 게이트 안에 있는 수준입니다."),
+  brokerHintRow("equipment", 0, "수리비 정도는 회수 가능할 것 같습니다."),
+  brokerHintRow("equipment", 1, "무기 장사꾼들이 관심을 보이고 있습니다."),
+  brokerHintRow("equipment", 2, "명장 공방에서 먼저 연락이 왔습니다."),
+  brokerHintRow("artifact", 0, "먼지는 좀 털어볼 가치가 있겠네요."),
+  brokerHintRow("artifact", 1, "박물관 쪽에서 먼저 연락이 왔습니다."),
+  brokerHintRow("artifact", 2, "이건 팔지 말고 전시해야 할 수도 있습니다."),
+  brokerHintRow("mutation", 0, "숫자가 조금 이상하게 움직입니다."),
+  brokerHintRow("mutation", 1, "게이트 보고서가 세 번 수정됐다고 합니다."),
+  brokerHintRow("mutation", 2, "측정기가 측정을 거부했습니다."),
 ];
 
 const wb = XLSX.utils.book_new();
 XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(README), "#ReadMe");
+XLSX.utils.book_append_sheet(
+  wb,
+  XLSX.utils.aoa_to_sheet(buildConstantsRows()),
+  "GateConstants",
+);
+XLSX.utils.book_append_sheet(
+  wb,
+  XLSX.utils.aoa_to_sheet(buildGradeBandRows()),
+  "GateGradeBands",
+);
 XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(GRADES), "GateGrades");
 XLSX.utils.book_append_sheet(
   wb,
   XLSX.utils.aoa_to_sheet(ENERGY_TIERS),
   "GateEnergyTiers",
 );
-XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(HINTS), "GateHints");
 XLSX.utils.book_append_sheet(
   wb,
-  XLSX.utils.aoa_to_sheet(ECONOMY),
-  "GateAuctionEconomy",
+  XLSX.utils.aoa_to_sheet(buildAuctionRows()),
+  "Auction",
+);
+XLSX.utils.book_append_sheet(
+  wb,
+  XLSX.utils.aoa_to_sheet(buildEnglishTimerTierRows()),
+  "EnglishTimerTiers",
+);
+XLSX.utils.book_append_sheet(
+  wb,
+  XLSX.utils.aoa_to_sheet(buildEnglishAiBehaviorRows()),
+  "EnglishAiBehavior",
+);
+XLSX.utils.book_append_sheet(
+  wb,
+  XLSX.utils.aoa_to_sheet(BROKER_HINTS),
+  "GateBrokerHints",
+);
+XLSX.utils.book_append_sheet(
+  wb,
+  XLSX.utils.aoa_to_sheet(buildArchetypeRows()),
+  "GateArchetypes",
+);
+XLSX.utils.book_append_sheet(
+  wb,
+  XLSX.utils.aoa_to_sheet(buildBrokerPricingRows()),
+  "GateBrokerPricing",
 );
 XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(buildUnlockRows()), "GateUnlock");
 XLSX.utils.book_append_sheet(

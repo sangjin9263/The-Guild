@@ -1,9 +1,8 @@
 using System;
-using System.Collections.Generic;
 
 public static class GateLotGenerator
 {
-    public static GateLot RollLot(GateDatabase db, int buildingLevel, Random rng)
+    public static GateLot RollLot(GateDatabase db, int buildingLevel, System.Random rng)
     {
         if (db == null)
             throw new ArgumentNullException(nameof(db));
@@ -14,27 +13,40 @@ public static class GateLotGenerator
         var grade = RollGrade(db, buildingLevel, rng);
         var tier = RollTier(db, grade, rng);
         var energy = RollEnergy(tier, rng);
-        var auctionType = GateDatabase.ResolveAuctionType(energy, tier.auctionTypeOverride);
-        var hint = PickHint(db, energy, rng);
-        var economy = db.GetEconomy(grade, tier.tierId)
-                     ?? throw new InvalidOperationException($"Missing economy for {grade} tier {tier.tierId}");
+        var auction = db.GetAuction(grade, tier.tierId)
+                     ?? throw new InvalidOperationException(
+                         $"Missing Auction row for {grade} tier {tier.tierId}");
+
+        var auctionType = auction.bidType;
+        var archetype = RollArchetype(db, grade, tier.tierId, rng);
+
+        var gateIdNumber = GateIdFormatter.RollFourDigitId(rng);
+        var regionCode = GateIdFormatter.DefaultRegionCode;
+        var englishAiCount = 0;
+
+        if (auctionType == AuctionType.English)
+            englishAiCount = db.RollEnglishAiCount(auction, rng);
 
         return new GateLot
         {
             buildingLevel = buildingLevel,
             grade = grade,
-            gradeBand = tier.gradeBand,
             tierId = tier.tierId,
             energy = energy,
             auctionType = auctionType,
-            hint = hint,
-            economy = economy
+            archetype = archetype,
+            auction = auction,
+            gateId = GateIdFormatter.Format(grade, gateIdNumber, regionCode),
+            gateIdNumber = gateIdNumber,
+            regionCode = regionCode,
+            regionDisplay = GateIdFormatter.DefaultRegionDisplay,
+            englishAiCount = englishAiCount
         };
     }
 
-    public static GateGrade RollGrade(GateDatabase db, int buildingLevel, Random rng)
+    private static GateGrade RollGrade(GateDatabase db, int buildingLevel, System.Random rng)
     {
-        var weights = new List<GateSpawnWeightDefinition>();
+        var weights = new System.Collections.Generic.List<GateSpawnWeightDefinition>();
         var total = 0;
 
         foreach (var row in db.GetSpawnWeights(buildingLevel))
@@ -62,9 +74,9 @@ public static class GateLotGenerator
         return weights[weights.Count - 1].grade;
     }
 
-    public static GateEnergyTierDefinition RollTier(GateDatabase db, GateGrade grade, Random rng)
+    private static GateEnergyTierDefinition RollTier(GateDatabase db, GateGrade grade, System.Random rng)
     {
-        var tiers = new List<GateEnergyTierDefinition>();
+        var tiers = new System.Collections.Generic.List<GateEnergyTierDefinition>();
         var total = 0;
 
         foreach (var tier in db.GetTiers(grade))
@@ -92,7 +104,7 @@ public static class GateLotGenerator
         return tiers[tiers.Count - 1];
     }
 
-    public static int RollEnergy(GateEnergyTierDefinition tier, Random rng)
+    private static int RollEnergy(GateEnergyTierDefinition tier, System.Random rng)
     {
         var candidates = BuildEnergyCandidates(tier);
         if (candidates.Count == 0)
@@ -102,42 +114,44 @@ public static class GateLotGenerator
         return candidates[rng.Next(candidates.Count)];
     }
 
-    /// <summary>100 미만 step 5, 100 이상 10 단위만 허용.</summary>
-    private static List<int> BuildEnergyCandidates(GateEnergyTierDefinition tier)
+    private static string RollArchetype(GateDatabase db, GateGrade grade, int tierId, System.Random rng)
     {
-        var step = GateDatabase.EnergyStepBelow100;
+        var weights = new System.Collections.Generic.List<GateArchetypeDefinition>();
+        var total = 0;
+
+        foreach (var row in db.GetArchetypeWeights(grade, tierId))
+        {
+            weights.Add(row);
+            total += row.weight;
+        }
+
+        if (weights.Count == 0 || total <= 0)
+            return "gold";
+
+        var roll = rng.Next(total);
+        var cumulative = 0;
+
+        foreach (var row in weights)
+        {
+            cumulative += row.weight;
+            if (roll < cumulative)
+                return row.archetype;
+        }
+
+        return weights[weights.Count - 1].archetype;
+    }
+
+    private static System.Collections.Generic.List<int> BuildEnergyCandidates(GateEnergyTierDefinition tier)
+    {
+        var step = GateDatabase.EnergyRollStep;
         var min = AlignUp(tier.energyMin, step);
         var max = AlignDown(tier.energyMax, step);
 
-        var list = new List<int>();
+        var list = new System.Collections.Generic.List<int>();
         for (var value = min; value <= max; value += step)
-        {
-            if (value >= GateDatabase.EnergyStepFrom100Threshold && value % GateDatabase.EnergyStepFrom100 != 0)
-                continue;
-
             list.Add(value);
-        }
 
         return list;
-    }
-
-    public static string PickHint(GateDatabase db, int energy, Random rng)
-    {
-        var pool = new List<string>();
-
-        foreach (var band in db.hints)
-        {
-            if (energy < band.energyMin || energy > band.energyMax)
-                continue;
-
-            foreach (var hint in band.GetHints())
-                pool.Add(hint);
-        }
-
-        if (pool.Count == 0)
-            return string.Empty;
-
-        return pool[rng.Next(pool.Count)];
     }
 
     private static int AlignUp(int value, int step) =>

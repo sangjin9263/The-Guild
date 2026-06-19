@@ -7,20 +7,27 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Gateinfo.xlsx → GateDatabase.asset
+/// Gateinfo.xlsx → GateDatabase.asset (BrokerHints/Archetypes Import)
 /// 규칙: 시트명·컬럼명이 '#'으로 시작하면 스킵.
 /// </summary>
 public static class GateDatabaseImporter
 {
     private const string XlsxPath = "Assets/Data/Gateinfo.xlsx";
     private const string OutputPath = GateDatabase.DefaultAssetPath;
+    private const string GateIconAtlasPath = "Assets/Resources/Art/Icon/gate_img_auction.png";
 
     private static readonly string[] ExpectedSheets =
     {
+        "GateConstants",
+        "GateGradeBands",
         "GateGrades",
         "GateEnergyTiers",
-        "GateHints",
-        "GateAuctionEconomy",
+        "Auction",
+        "EnglishTimerTiers",
+        "EnglishAiBehavior",
+        "GateBrokerHints",
+        "GateArchetypes",
+        "GateBrokerPricing",
         "GateUnlock",
         "GateSpawnWeights"
     };
@@ -33,8 +40,10 @@ public static class GateDatabaseImporter
             var db = Import(writeAsset: true);
             Debug.Log(
                 $"[GateImport] OK → {OutputPath}\n" +
-                $"  grades={db.grades.Count}, tiers={db.energyTiers.Count}, hints={db.hints.Count}, " +
-                $"economy={db.economy.Count}, unlocks={db.unlocks.Count}, spawn={db.spawnWeights.Count}");
+                $"  grades={db.grades.Count}, tiers={db.energyTiers.Count}, auctions={db.auctions.Count}, " +
+                $"englishTimers={db.englishTimerTiers.Count}, englishAi={db.englishAiBehaviors.Count}, " +
+                $"brokerHints={db.brokerHints.Count}, archetypes={db.archetypes.Count}, " +
+                $"unlocks={db.unlocks.Count}, spawn={db.spawnWeights.Count}");
         }
         catch (Exception ex)
         {
@@ -61,11 +70,28 @@ public static class GateDatabaseImporter
                 throw new InvalidOperationException($"Missing sheet: {expected}");
         }
 
+        if (!byName.ContainsKey("Auction") && !byName.ContainsKey("EbayAuction"))
+            throw new InvalidOperationException("Missing sheet: Auction (or legacy EbayAuction)");
+
         var db = ScriptableObject.CreateInstance<GateDatabase>();
+        db.constants = ParseConstants(byName["GateConstants"]);
+        db.gradeBands = ParseGradeBands(byName["GateGradeBands"]);
         db.grades = ParseGrades(byName["GateGrades"]);
+        ResolveGradeIcons(db.grades);
         db.energyTiers = ParseEnergyTiers(byName["GateEnergyTiers"]);
-        db.hints = ParseHints(byName["GateHints"]);
-        db.economy = ParseEconomy(byName["GateAuctionEconomy"]);
+        db.auctions = ParseAuction(
+            byName.TryGetValue("Auction", out var auctionTable)
+                ? auctionTable
+                : byName["EbayAuction"]);
+        db.englishTimerTiers = byName.TryGetValue("EnglishTimerTiers", out var timerTable)
+            ? ParseEnglishTimerTiers(timerTable)
+            : DefaultEnglishTimerTiers();
+        db.englishAiBehaviors = byName.TryGetValue("EnglishAiBehavior", out var aiTable)
+            ? ParseEnglishAiBehavior(aiTable)
+            : new List<EnglishAiBehaviorDefinition>();
+        db.brokerHints = ParseBrokerHints(byName["GateBrokerHints"]);
+        db.archetypes = ParseArchetypes(byName["GateArchetypes"]);
+        db.brokerPricing = ParseBrokerPricing(byName["GateBrokerPricing"]);
         db.unlocks = ParseUnlocks(byName["GateUnlock"]);
         db.spawnWeights = ParseSpawnWeights(byName["GateSpawnWeights"]);
 
@@ -82,17 +108,25 @@ public static class GateDatabaseImporter
             }
             else
             {
-                existing.grades = db.grades;
-                existing.energyTiers = db.energyTiers;
-                existing.hints = db.hints;
-                existing.economy = db.economy;
+                existing.auctions = db.auctions;
+                existing.englishTimerTiers = db.englishTimerTiers;
+                existing.englishAiBehaviors = db.englishAiBehaviors;
+                existing.gradeBands = db.gradeBands;
+                existing.constants = db.constants;
+                existing.brokerHints = db.brokerHints;
+                existing.archetypes = db.archetypes;
+                existing.brokerPricing = db.brokerPricing;
                 existing.unlocks = db.unlocks;
                 existing.spawnWeights = db.spawnWeights;
+                existing.energyTiers = db.energyTiers;
+                existing.grades = db.grades;
                 EditorUtility.SetDirty(existing);
                 db = existing;
             }
 
             AssetDatabase.SaveAssets();
+            var bakeResult = GameUIFontBaker.BakeFromDatabase(db);
+            Debug.Log($"[GateImport] Font bake → {GameUIFontBaker.OutputRegularPath} ({bakeResult})");
         }
 
         return db;
@@ -121,6 +155,12 @@ public static class GateDatabaseImporter
         return value;
     }
 
+    private static int ParseIntOrDefault(Dictionary<string, string> row, string column, int defaultValue)
+    {
+        var text = Get(row, column);
+        return int.TryParse(text, out var value) ? value : defaultValue;
+    }
+
     private static List<GateGradeDefinition> ParseGrades(GateXlsxReader.SheetTable table)
     {
         var list = new List<GateGradeDefinition>();
@@ -133,13 +173,50 @@ public static class GateDatabaseImporter
             list.Add(new GateGradeDefinition
             {
                 grade = GateGradeUtility.Parse(gradeText),
-                energyMin = ParseInt(row, "energy_min", "GateGrades"),
-                energyMax = ParseInt(row, "energy_max", "GateGrades"),
-                gradeBand = Get(row, "grade_band")
+                iconSprite = Get(row, "icon_sprite")
             });
         }
 
         return list;
+    }
+
+    private static void ResolveGradeIcons(List<GateGradeDefinition> grades)
+    {
+        var spritesByName = LoadGateIconSpritesByName();
+
+        for (var i = 0; i < grades.Count; i++)
+        {
+            var row = grades[i];
+            var spriteName = string.IsNullOrWhiteSpace(row.iconSprite)
+                ? GateGradeUtility.GetDisplayName(row.grade)
+                : row.iconSprite.Trim();
+
+            if (!spritesByName.TryGetValue(spriteName, out var sprite))
+                throw new InvalidOperationException(
+                    $"GateGrades {row.grade}: gate icon sprite not found '{spriteName}' in {GateIconAtlasPath}");
+
+            row.icon = sprite;
+            grades[i] = row;
+        }
+    }
+
+    private static Dictionary<string, Sprite> LoadGateIconSpritesByName()
+    {
+        var map = new Dictionary<string, Sprite>(StringComparer.Ordinal);
+        var assets = AssetDatabase.LoadAllAssetsAtPath(GateIconAtlasPath);
+
+        foreach (var asset in assets)
+        {
+            if (asset is not Sprite sprite || string.IsNullOrEmpty(sprite.name))
+                continue;
+
+            map[sprite.name] = sprite;
+        }
+
+        if (map.Count == 0)
+            throw new InvalidOperationException($"No sprites found at {GateIconAtlasPath}");
+
+        return map;
     }
 
     private static List<GateEnergyTierDefinition> ParseEnergyTiers(GateXlsxReader.SheetTable table)
@@ -155,7 +232,6 @@ public static class GateDatabaseImporter
             {
                 grade = GateGradeUtility.Parse(gradeText),
                 tierId = ParseInt(row, "tier_id", "GateEnergyTiers"),
-                gradeBand = Get(row, "grade_band"),
                 energyMin = ParseInt(row, "energy_min", "GateEnergyTiers"),
                 energyMax = ParseInt(row, "energy_max", "GateEnergyTiers"),
                 tierWeightPercent = ParseInt(row, "tier_weight", "GateEnergyTiers"),
@@ -167,48 +243,201 @@ public static class GateDatabaseImporter
         return list;
     }
 
-    private static List<GateHintBandDefinition> ParseHints(GateXlsxReader.SheetTable table)
+    private static List<GateConstantDefinition> ParseConstants(GateXlsxReader.SheetTable table)
     {
-        var list = new List<GateHintBandDefinition>();
+        var list = new List<GateConstantDefinition>();
         foreach (var row in table.Rows)
         {
-            if (string.IsNullOrWhiteSpace(Get(row, "energy_min")))
+            var key = Get(row, "key");
+            if (string.IsNullOrWhiteSpace(key))
                 continue;
 
-            list.Add(new GateHintBandDefinition
+            list.Add(new GateConstantDefinition
             {
-                energyMin = ParseInt(row, "energy_min", "GateHints"),
-                energyMax = ParseInt(row, "energy_max", "GateHints"),
-                hintDisplay1 = Get(row, "hint_display1"),
-                hintDisplay2 = Get(row, "hint_display2"),
-                hintDisplay3 = Get(row, "hint_display3")
+                key = key.Trim(),
+                value = Get(row, "value").Trim()
             });
         }
 
         return list;
     }
 
-    private static List<GateAuctionEconomyDefinition> ParseEconomy(GateXlsxReader.SheetTable table)
+    private static List<GateGradeBandDefinition> ParseGradeBands(GateXlsxReader.SheetTable table)
     {
-        var list = new List<GateAuctionEconomyDefinition>();
+        var list = new List<GateGradeBandDefinition>();
         foreach (var row in table.Rows)
         {
             var gradeText = Get(row, "grade");
             if (string.IsNullOrWhiteSpace(gradeText))
                 continue;
 
-            list.Add(new GateAuctionEconomyDefinition
+            list.Add(new GateGradeBandDefinition
             {
                 grade = GateGradeUtility.Parse(gradeText),
-                tierId = ParseInt(row, "tier_id", "GateAuctionEconomy"),
-                startingPriceMin = ParseInt(row, "starting_price_min", "GateAuctionEconomy"),
-                startingPriceMax = ParseInt(row, "starting_price_max", "GateAuctionEconomy"),
-                rewardGoldMin = ParseInt(row, "reward_gold_min", "GateAuctionEconomy"),
-                rewardGoldMax = ParseInt(row, "reward_gold_max", "GateAuctionEconomy"),
-                clearTimeSec = ParseInt(row, "clear_time_sec", "GateAuctionEconomy"),
-                ebayDurationSec = ParseInt(row, "ebay_duration_sec", "GateAuctionEconomy"),
-                bidIncrement = ParseInt(row, "bid_increment", "GateAuctionEconomy"),
-                englishRoundSec = ParseInt(row, "english_round_sec", "GateAuctionEconomy")
+                gradeBand = Get(row, "grade_band").Trim()
+            });
+        }
+
+        return list;
+    }
+
+    private static List<GateBrokerHintDefinition> ParseBrokerHints(GateXlsxReader.SheetTable table)
+    {
+        var list = new List<GateBrokerHintDefinition>();
+        foreach (var row in table.Rows)
+        {
+            var archetype = Get(row, "archetype");
+            if (string.IsNullOrWhiteSpace(archetype))
+                continue;
+
+            list.Add(new GateBrokerHintDefinition
+            {
+                archetype = archetype.Trim(),
+                tierId = ParseInt(row, "tier_id", "GateBrokerHints"),
+                hintText = Get(row, "hint_text").Trim(),
+                hintInfo = Get(row, "hint_info").Trim(),
+                upArrow = ParseIntOrDefault(row, "up_arrow", 0)
+            });
+        }
+
+        return list;
+    }
+
+    private static List<GateArchetypeDefinition> ParseArchetypes(GateXlsxReader.SheetTable table)
+    {
+        var list = new List<GateArchetypeDefinition>();
+        foreach (var row in table.Rows)
+        {
+            var gradeText = Get(row, "grade");
+            if (string.IsNullOrWhiteSpace(gradeText))
+                continue;
+
+            list.Add(new GateArchetypeDefinition
+            {
+                grade = GateGradeUtility.Parse(gradeText),
+                tierId = ParseInt(row, "tier_id", "GateArchetypes"),
+                archetype = Get(row, "archetype").Trim(),
+                weight = ParseInt(row, "weight", "GateArchetypes")
+            });
+        }
+
+        return list;
+    }
+
+    private static List<GateBrokerPricingDefinition> ParseBrokerPricing(GateXlsxReader.SheetTable table)
+    {
+        var list = new List<GateBrokerPricingDefinition>();
+        foreach (var row in table.Rows)
+        {
+            var gradeText = Get(row, "grade");
+            if (string.IsNullOrWhiteSpace(gradeText))
+                continue;
+
+            list.Add(new GateBrokerPricingDefinition
+            {
+                grade = GateGradeUtility.Parse(gradeText),
+                hintCostPctOfMinBid = ParseInt(row, "hint_cost_pct_of_min_bid", "GateBrokerPricing")
+            });
+        }
+
+        return list;
+    }
+
+    private static List<AuctionDefinition> ParseAuction(GateXlsxReader.SheetTable table)
+    {
+        var list = new List<AuctionDefinition>();
+        var hasBidType = table.Rows.Count > 0 && table.Rows[0].ContainsKey("bid_type");
+
+        foreach (var row in table.Rows)
+        {
+            var gradeText = Get(row, "grade");
+            if (string.IsNullOrWhiteSpace(gradeText))
+                continue;
+
+            var grade = GateGradeUtility.Parse(gradeText);
+            var tierId = ParseInt(row, "tier_id", "Auction");
+            AuctionType bidType;
+
+            if (hasBidType && AuctionTypeUtility.TryParse(Get(row, "bid_type"), out var parsedType))
+                bidType = parsedType;
+            else
+                bidType = ResolveBidTypeFromRules(grade, tierId);
+
+            var aiMin = ParseIntOrDefault(row, "ai_count_min", 2);
+            var aiMax = ParseIntOrDefault(row, "ai_count_max", aiMin);
+
+            list.Add(new AuctionDefinition
+            {
+                grade = grade,
+                tierId = tierId,
+                bidType = bidType,
+                bidBandMin = ParseInt(row, "bid_band_min", "Auction"),
+                bidBandMax = ParseInt(row, "bid_band_max", "Auction"),
+                aiCountMin = aiMin,
+                aiCountMax = aiMax
+            });
+        }
+
+        return list;
+    }
+
+    private static AuctionType ResolveBidTypeFromRules(GateGrade grade, int tierId)
+    {
+        if (tierId >= GateDatabase.DefaultEnglishTierId)
+            return AuctionType.English;
+
+        if (GateGradeUtility.IsAtLeast(grade, GateDatabase.DefaultEnglishMinGrade))
+            return AuctionType.English;
+
+        return AuctionType.Ebay;
+    }
+
+    private static List<EnglishTimerTierDefinition> ParseEnglishTimerTiers(GateXlsxReader.SheetTable table)
+    {
+        var list = new List<EnglishTimerTierDefinition>();
+        foreach (var row in table.Rows)
+        {
+            if (string.IsNullOrWhiteSpace(Get(row, "bid_count_gt")))
+                continue;
+
+            list.Add(new EnglishTimerTierDefinition
+            {
+                bidCountGt = ParseInt(row, "bid_count_gt", "EnglishTimerTiers"),
+                timerSec = ParseInt(row, "timer_sec", "EnglishTimerTiers")
+            });
+        }
+
+        return list;
+    }
+
+    private static List<EnglishTimerTierDefinition> DefaultEnglishTimerTiers() =>
+        new()
+        {
+            new EnglishTimerTierDefinition { bidCountGt = 0, timerSec = 60 },
+            new EnglishTimerTierDefinition { bidCountGt = 4, timerSec = 45 },
+            new EnglishTimerTierDefinition { bidCountGt = 7, timerSec = 30 },
+            new EnglishTimerTierDefinition { bidCountGt = 10, timerSec = 15 }
+        };
+
+    private static List<EnglishAiBehaviorDefinition> ParseEnglishAiBehavior(GateXlsxReader.SheetTable table)
+    {
+        var list = new List<EnglishAiBehaviorDefinition>();
+        foreach (var row in table.Rows)
+        {
+            var gradeText = Get(row, "grade");
+            if (string.IsNullOrWhiteSpace(gradeText))
+                continue;
+
+            list.Add(new EnglishAiBehaviorDefinition
+            {
+                grade = GateGradeUtility.Parse(gradeText),
+                stepCountMin = ParseInt(row, "step_count_min", "EnglishAiBehavior"),
+                stepCountMax = ParseInt(row, "step_count_max", "EnglishAiBehavior"),
+                playerCounterStepMin = ParseInt(row, "player_counter_step_min", "EnglishAiBehavior"),
+                playerCounterStepMax = ParseInt(row, "player_counter_step_max", "EnglishAiBehavior"),
+                reactDelaySecMin = ParseInt(row, "react_delay_sec_min", "EnglishAiBehavior"),
+                reactDelaySecMax = ParseInt(row, "react_delay_sec_max", "EnglishAiBehavior"),
+                counterBidChancePct = ParseInt(row, "counter_bid_chance_pct", "EnglishAiBehavior")
             });
         }
 
@@ -227,11 +456,16 @@ public static class GateDatabaseImporter
             if (!AuctionTabModeUtility.TryParse(tabsText, out var tabs))
                 throw new FormatException($"GateUnlock: invalid auction_tabs '{tabsText}'");
 
+            var energyBarText = Get(row, "energy_bar_max");
+            var energyBarMax = string.IsNullOrWhiteSpace(energyBarText)
+                ? GateDatabase.EnergyPercentMax
+                : ParseInt(row, "energy_bar_max", "GateUnlock");
+
             list.Add(new GateUnlockDefinition
             {
                 buildingLevel = ParseInt(row, "building_level", "GateUnlock"),
                 maxUnlockedGrade = GateGradeUtility.Parse(Get(row, "max_unlocked_grade")),
-                energyBarMax = ParseInt(row, "energy_bar_max", "GateUnlock"),
+                energyBarMax = energyBarMax,
                 auctionTabs = tabs
             });
         }
@@ -286,10 +520,38 @@ public static class GateDatabaseImporter
                 Debug.LogWarning($"[GateImport] GateEnergyTiers {gradeGroup.Key}: tier_weight sum={sum} (expected 100)");
         }
 
+        foreach (var group in db.archetypes.GroupBy(a => (a.grade, a.tierId)))
+        {
+            var sum = group.Sum(a => a.weight);
+            if (sum != 100)
+                Debug.LogWarning(
+                    $"[GateImport] GateArchetypes {group.Key.grade} tier{group.Key.tierId}: weight sum={sum} (expected 100)");
+        }
+
         foreach (var grade in Enum.GetValues(typeof(GateGrade)).Cast<GateGrade>())
         {
-            if (db.GetGrade(grade) == null)
+            var row = db.GetGrade(grade);
+            if (row == null)
+            {
                 Debug.LogWarning($"[GateImport] GateGrades missing row for {grade}");
+                continue;
+            }
+
+            if (row.Value.icon == null)
+                Debug.LogWarning($"[GateImport] GateGrades {grade}: icon sprite not resolved.");
+        }
+
+        if (db.auctions.Count == 0)
+            throw new InvalidOperationException(
+                "[GateImport] Auction sheet produced 0 rows — check Gateinfo.xlsx Auction tab.");
+
+        foreach (var tier in db.energyTiers)
+        {
+            if (db.GetAuction(tier.grade, tier.tierId) != null)
+                continue;
+
+            throw new InvalidOperationException(
+                $"[GateImport] Auction missing row for {GateGradeUtility.GetDisplayName(tier.grade)} tier {tier.tierId}.");
         }
     }
 }

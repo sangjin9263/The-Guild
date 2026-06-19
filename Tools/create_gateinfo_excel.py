@@ -63,7 +63,7 @@ ENERGY_TIERS = [
     ("SSS", "high", "energy_hint_high", 180, 190, "English", 3),
 ]
 
-# (grade, tier_id, starting_price_min, starting_price_max, reward_gold_min, reward_gold_max,
+# (grade, tier_id, bid_band_min, bid_band_max, reward_gold_min, reward_gold_max,
 #  clear_time_sec, ebay_duration_sec, bid_increment, english_round_sec)
 ECONOMY = [
     ("E", "low", 50, 80, 100, 200, 1800, 60, 10, 15),
@@ -187,8 +187,8 @@ def main():
     econ_headers = [
         "grade",
         "tier_id",
-        "starting_price_min",
-        "starting_price_max",
+        "bid_band_min",
+        "bid_band_max",
         "reward_gold_min",
         "reward_gold_max",
         "clear_time_sec",

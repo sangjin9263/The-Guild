@@ -14,620 +14,514 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GateDatabase
   grades:
   - grade: 0
-    energyMin: 40
-    energyMax: 70
-    gradeBand: "\uD558\uC704"
+    iconSprite: 
+    icon: {fileID: -1654867436, guid: 60ecf25a0901a4249acbf1c85b76f895, type: 3}
   - grade: 1
-    energyMin: 50
-    energyMax: 80
-    gradeBand: "\uD558\uC704"
+    iconSprite: 
+    icon: {fileID: -833355959, guid: 60ecf25a0901a4249acbf1c85b76f895, type: 3}
   - grade: 2
-    energyMin: 60
-    energyMax: 90
-    gradeBand: "\uD558\uC704"
+    iconSprite: 
+    icon: {fileID: -2005060542, guid: 60ecf25a0901a4249acbf1c85b76f895, type: 3}
   - grade: 3
-    energyMin: 70
-    energyMax: 100
-    gradeBand: "\uC911\uC704"
+    iconSprite: 
+    icon: {fileID: 1837477535, guid: 60ecf25a0901a4249acbf1c85b76f895, type: 3}
   - grade: 4
-    energyMin: 80
-    energyMax: 150
-    gradeBand: "\uC911\uC704"
+    iconSprite: 
+    icon: {fileID: -1685859583, guid: 60ecf25a0901a4249acbf1c85b76f895, type: 3}
   - grade: 5
-    energyMin: 90
-    energyMax: 170
-    gradeBand: "\uC911\uC704"
+    iconSprite: 
+    icon: {fileID: 1438816711, guid: 60ecf25a0901a4249acbf1c85b76f895, type: 3}
   - grade: 6
-    energyMin: 100
-    energyMax: 200
-    gradeBand: "\uC0C1\uC704"
+    iconSprite: 
+    icon: {fileID: 471563470, guid: 60ecf25a0901a4249acbf1c85b76f895, type: 3}
   - grade: 7
-    energyMin: 150
-    energyMax: 250
-    gradeBand: "\uC0C1\uC704"
+    iconSprite: 
+    icon: {fileID: -316653540, guid: 60ecf25a0901a4249acbf1c85b76f895, type: 3}
   - grade: 8
-    energyMin: 200
-    energyMax: 300
-    gradeBand: "\uCD5C\uC0C1\uC704"
+    iconSprite: 
+    icon: {fileID: 8829019817508091749, guid: 60ecf25a0901a4249acbf1c85b76f895, type: 3}
   energyTiers:
   - grade: 0
     tierId: 0
-    gradeBand: "\uD558\uC704"
+    energyMin: 5
+    energyMax: 25
+    tierWeightPercent: 60
+    displayOrder: 1
+    auctionTypeOverride: Ebay
+  - grade: 0
+    tierId: 1
+    energyMin: 30
+    energyMax: 35
+    tierWeightPercent: 30
+    displayOrder: 2
+    auctionTypeOverride: Ebay
+  - grade: 0
+    tierId: 2
     energyMin: 40
-    energyMax: 50
-    tierWeightPercent: 60
-    displayOrder: 1
-    auctionTypeOverride: 
-  - grade: 0
-    tierId: 1
-    gradeBand: "\uD558\uC704"
-    energyMin: 55
-    energyMax: 60
-    tierWeightPercent: 30
-    displayOrder: 2
-    auctionTypeOverride: 
-  - grade: 0
-    tierId: 2
-    gradeBand: "\uD558\uC704"
-    energyMin: 65
-    energyMax: 70
+    energyMax: 45
     tierWeightPercent: 10
     displayOrder: 3
-    auctionTypeOverride: 
+    auctionTypeOverride: English
   - grade: 1
     tierId: 0
-    gradeBand: "\uD558\uC704"
+    energyMin: 40
+    energyMax: 45
+    tierWeightPercent: 60
+    displayOrder: 1
+    auctionTypeOverride: Ebay
+  - grade: 1
+    tierId: 1
     energyMin: 50
-    energyMax: 60
-    tierWeightPercent: 60
-    displayOrder: 1
-    auctionTypeOverride: 
-  - grade: 1
-    tierId: 1
-    gradeBand: "\uD558\uC704"
-    energyMin: 65
-    energyMax: 70
+    energyMax: 55
     tierWeightPercent: 30
     displayOrder: 2
-    auctionTypeOverride: 
+    auctionTypeOverride: Ebay
   - grade: 1
     tierId: 2
-    gradeBand: "\uD558\uC704"
-    energyMin: 75
-    energyMax: 80
-    tierWeightPercent: 10
-    displayOrder: 3
-    auctionTypeOverride: 
-  - grade: 2
-    tierId: 0
-    gradeBand: "\uD558\uC704"
     energyMin: 60
-    energyMax: 70
-    tierWeightPercent: 60
-    displayOrder: 1
-    auctionTypeOverride: 
-  - grade: 2
-    tierId: 1
-    gradeBand: "\uD558\uC704"
-    energyMin: 75
-    energyMax: 80
-    tierWeightPercent: 30
-    displayOrder: 2
-    auctionTypeOverride: 
-  - grade: 2
-    tierId: 2
-    gradeBand: "\uD558\uC704"
-    energyMin: 85
-    energyMax: 90
+    energyMax: 65
     tierWeightPercent: 10
     displayOrder: 3
-    auctionTypeOverride: 
-  - grade: 3
+    auctionTypeOverride: English
+  - grade: 2
     tierId: 0
-    gradeBand: "\uC911\uC704"
+    energyMin: 60
+    energyMax: 65
+    tierWeightPercent: 60
+    displayOrder: 1
+    auctionTypeOverride: Ebay
+  - grade: 2
+    tierId: 1
     energyMin: 70
-    energyMax: 80
-    tierWeightPercent: 60
-    displayOrder: 1
-    auctionTypeOverride: 
-  - grade: 3
-    tierId: 1
-    gradeBand: "\uC911\uC704"
-    energyMin: 85
-    energyMax: 90
+    energyMax: 75
     tierWeightPercent: 30
     displayOrder: 2
-    auctionTypeOverride: 
-  - grade: 3
+    auctionTypeOverride: Ebay
+  - grade: 2
     tierId: 2
-    gradeBand: "\uC911\uC704"
-    energyMin: 95
-    energyMax: 100
-    tierWeightPercent: 10
-    displayOrder: 3
-    auctionTypeOverride: 
-  - grade: 4
-    tierId: 0
-    gradeBand: "\uC911\uC704"
     energyMin: 80
-    energyMax: 100
-    tierWeightPercent: 60
-    displayOrder: 1
-    auctionTypeOverride: 
-  - grade: 4
-    tierId: 1
-    gradeBand: "\uC911\uC704"
-    energyMin: 110
-    energyMax: 130
-    tierWeightPercent: 30
-    displayOrder: 2
-    auctionTypeOverride: 
-  - grade: 4
-    tierId: 2
-    gradeBand: "\uC911\uC704"
-    energyMin: 140
-    energyMax: 150
+    energyMax: 85
     tierWeightPercent: 10
     displayOrder: 3
-    auctionTypeOverride: 
-  - grade: 5
+    auctionTypeOverride: English
+  - grade: 3
     tierId: 0
-    gradeBand: "\uC911\uC704"
+    energyMin: 80
+    energyMax: 85
+    tierWeightPercent: 60
+    displayOrder: 1
+    auctionTypeOverride: Ebay
+  - grade: 3
+    tierId: 1
     energyMin: 90
-    energyMax: 120
-    tierWeightPercent: 60
-    displayOrder: 1
-    auctionTypeOverride: 
-  - grade: 5
-    tierId: 1
-    gradeBand: "\uC911\uC704"
-    energyMin: 130
-    energyMax: 150
+    energyMax: 95
     tierWeightPercent: 30
     displayOrder: 2
-    auctionTypeOverride: 
-  - grade: 5
+    auctionTypeOverride: Ebay
+  - grade: 3
     tierId: 2
-    gradeBand: "\uC911\uC704"
-    energyMin: 160
-    energyMax: 170
-    tierWeightPercent: 10
-    displayOrder: 3
-    auctionTypeOverride: 
-  - grade: 6
-    tierId: 0
-    gradeBand: "\uC0C1\uC704"
     energyMin: 100
-    energyMax: 150
-    tierWeightPercent: 60
-    displayOrder: 1
-    auctionTypeOverride: 
-  - grade: 6
-    tierId: 1
-    gradeBand: "\uC0C1\uC704"
-    energyMin: 160
-    energyMax: 180
-    tierWeightPercent: 30
-    displayOrder: 2
-    auctionTypeOverride: 
-  - grade: 6
-    tierId: 2
-    gradeBand: "\uC0C1\uC704"
-    energyMin: 190
-    energyMax: 200
+    energyMax: 105
     tierWeightPercent: 10
     displayOrder: 3
-    auctionTypeOverride: 
-  - grade: 7
+    auctionTypeOverride: English
+  - grade: 4
     tierId: 0
-    gradeBand: "\uC0C1\uC704"
+    energyMin: 100
+    energyMax: 105
+    tierWeightPercent: 60
+    displayOrder: 1
+    auctionTypeOverride: Ebay
+  - grade: 4
+    tierId: 1
+    energyMin: 110
+    energyMax: 115
+    tierWeightPercent: 30
+    displayOrder: 2
+    auctionTypeOverride: Ebay
+  - grade: 4
+    tierId: 2
+    energyMin: 120
+    energyMax: 125
+    tierWeightPercent: 10
+    displayOrder: 3
+    auctionTypeOverride: English
+  - grade: 5
+    tierId: 0
+    energyMin: 120
+    energyMax: 125
+    tierWeightPercent: 60
+    displayOrder: 1
+    auctionTypeOverride: Ebay
+  - grade: 5
+    tierId: 1
+    energyMin: 130
+    energyMax: 135
+    tierWeightPercent: 30
+    displayOrder: 2
+    auctionTypeOverride: Ebay
+  - grade: 5
+    tierId: 2
+    energyMin: 140
+    energyMax: 145
+    tierWeightPercent: 10
+    displayOrder: 3
+    auctionTypeOverride: English
+  - grade: 6
+    tierId: 0
+    energyMin: 140
+    energyMax: 145
+    tierWeightPercent: 60
+    displayOrder: 1
+    auctionTypeOverride: English
+  - grade: 6
+    tierId: 1
     energyMin: 150
-    energyMax: 200
-    tierWeightPercent: 60
-    displayOrder: 1
-    auctionTypeOverride: 
-  - grade: 7
-    tierId: 1
-    gradeBand: "\uC0C1\uC704"
-    energyMin: 210
-    energyMax: 230
+    energyMax: 155
     tierWeightPercent: 30
     displayOrder: 2
-    auctionTypeOverride: 
-  - grade: 7
+    auctionTypeOverride: English
+  - grade: 6
     tierId: 2
-    gradeBand: "\uC0C1\uC704"
-    energyMin: 240
-    energyMax: 250
+    energyMin: 160
+    energyMax: 165
     tierWeightPercent: 10
     displayOrder: 3
-    auctionTypeOverride: 
+    auctionTypeOverride: English
+  - grade: 7
+    tierId: 0
+    energyMin: 160
+    energyMax: 165
+    tierWeightPercent: 60
+    displayOrder: 1
+    auctionTypeOverride: English
+  - grade: 7
+    tierId: 1
+    energyMin: 170
+    energyMax: 175
+    tierWeightPercent: 30
+    displayOrder: 2
+    auctionTypeOverride: English
+  - grade: 7
+    tierId: 2
+    energyMin: 180
+    energyMax: 185
+    tierWeightPercent: 10
+    displayOrder: 3
+    auctionTypeOverride: English
   - grade: 8
     tierId: 0
-    gradeBand: "\uCD5C\uC0C1\uC704"
+    energyMin: 180
+    energyMax: 185
+    tierWeightPercent: 60
+    displayOrder: 1
+    auctionTypeOverride: English
+  - grade: 8
+    tierId: 1
+    energyMin: 190
+    energyMax: 195
+    tierWeightPercent: 30
+    displayOrder: 2
+    auctionTypeOverride: English
+  - grade: 8
+    tierId: 2
     energyMin: 200
-    energyMax: 240
-    tierWeightPercent: 60
-    displayOrder: 1
-    auctionTypeOverride: 
-  - grade: 8
-    tierId: 1
-    gradeBand: "\uCD5C\uC0C1\uC704"
-    energyMin: 250
-    energyMax: 290
-    tierWeightPercent: 30
-    displayOrder: 2
-    auctionTypeOverride: 
-  - grade: 8
-    tierId: 2
-    gradeBand: "\uCD5C\uC0C1\uC704"
-    energyMin: 290
-    energyMax: 300
+    energyMax: 200
     tierWeightPercent: 10
     displayOrder: 3
-    auctionTypeOverride: 
-  hints:
-  - energyMin: 40
-    energyMax: 50
-    hintDisplay1: "\uC870\uC6A9\uD558\uB2E4."
-    hintDisplay2: "\uC544\uBB34 \uC77C \uC5C6\uC5B4 \uBCF4\uC778\uB2E4."
-    hintDisplay3: "\uBC14\uB78C\uB9CC \uC2A4\uCE5C\uB2E4."
-  - energyMin: 55
-    energyMax: 60
-    hintDisplay1: "\uBB34\uB09C\uD558\uB2E4."
-    hintDisplay2: "\uD3C9\uBC94\uD55C \uB290\uB08C\uC758 \uB358\uC804\uC774\uB2E4."
-    hintDisplay3: "\uD2B9\uBCC4\uD560 \uAC83 \uC5C6\uB2E4."
-  - energyMin: 65
-    energyMax: 70
-    hintDisplay1: "\uBBF8\uC138\uD55C \uAE30\uC6B4\uC774 \uB290\uAEF4\uC9C4\uB2E4."
-    hintDisplay2: "\uC0B4\uC9DD \uC2F8\uD55C \uB0C4\uC0C8\uAC00 \uB09C\uB2E4."
-    hintDisplay3: "\uAE30\uC6B4\uC774 \uC2A4\uCE5C\uB2E4."
-  - energyMin: 75
-    energyMax: 80
-    hintDisplay1: "\uD53C\uBD80\uAC00 \uB530\uB054\uD558\uB2E4."
-    hintDisplay2: "\uC5B4\uB518\uAC00 \uC5B4\uC218\uC120\uD558\uB2E4."
-    hintDisplay3: "\uAC70\uC13C \uAE30\uC6B4\uC774 \uC2A4\uCE5C\uB2E4."
-  - energyMin: 85
-    energyMax: 90
-    hintDisplay1: "\uC548\uC774 \uC6B8\uB9AC\uB294 \uB290\uB08C\uC774\uB2E4."
-    hintDisplay2: "\uACF5\uAE30\uAC00 \uBB34\uAC70\uC6CC\uC9C4\uB2E4."
-    hintDisplay3: "\uADC0\uAC00 \uBA39\uBA39\uD558\uB2E4."
-  - energyMin: 95
-    energyMax: 100
-    hintDisplay1: "\uC2E0\uACBD\uC774 \uACE4\uB450\uC120\uB2E4."
-    hintDisplay2: "\uC555\uBC15\uC774 \uB290\uAEF4\uC9C4\uB2E4."
-    hintDisplay3: "\uBB54\uAC00 \uC798\uBABB\uB410\uB2E4."
-  - energyMin: 110
-    energyMax: 130
-    hintDisplay1: "\uC73C\uB4DC\uB4DD\uAC70\uB9AC\uB294 \uC18C\uB9AC\uAC00 \uB09C\uB2E4."
-    hintDisplay2: "\uC228\uC774 \uAC00\uBE60\uC9C4\uB2E4."
-    hintDisplay3: "\uC548\uAC1C\uAC00 \uB9F4\uB3C8\uB2E4."
-  - energyMin: 140
-    energyMax: 150
-    hintDisplay1: "\uBD88\uC548\uD55C \uC608\uAC10\uC774 \uB4E0\uB2E4."
-    hintDisplay2: "\uB4A4\uD1B5\uC218\uAC00 \uC11C\uB298\uD558\uB2E4."
-    hintDisplay3: "\uB204\uAC00 \uBCF4\uACE0 \uC788\uB2E4."
-  - energyMin: 160
-    energyMax: 180
-    hintDisplay1: "\uB545\uC774 \uC6B8\uB9B0\uB2E4."
-    hintDisplay2: "\uACF5\uAE30\uAC00 \uB5A8\uB9B0\uB2E4."
-    hintDisplay3: "\uC2EC\uC7A5\uC774 \uBE68\uB77C\uC9C4\uB2E4."
-  - energyMin: 190
-    energyMax: 200
-    hintDisplay1: "\uAC00\uC2B4\uC774 \uC870\uC5EC\uB4E0\uB2E4."
-    hintDisplay2: "\uC18C\uB984\uC774 \uB3CB\uB294 \uAE30\uC6B4\uC774\uB2E4."
-    hintDisplay3: "\uB2E4\uB9AC\uAC00 \uBB34\uAC70\uC6CC\uC9C4\uB2E4."
-  - energyMin: 210
-    energyMax: 230
-    hintDisplay1: "\uB3C4\uB9DD\uCE58\uACE0 \uC2F6\uC5B4\uC9C4\uB2E4."
-    hintDisplay2: "\uBCF8\uB2A5\uC774 \uACBD\uACC4\uD55C\uB2E4."
-    hintDisplay3: "\uC774\uC720\uB97C \uBAA8\uB974\uAC8C \uB450\uB835\uB2E4."
-  - energyMin: 240
-    energyMax: 249
-    hintDisplay1: "\uBC1C\uC774 \uB5A8\uC5B4\uC9C0\uC9C0 \uC54A\uB294\uB2E4."
-    hintDisplay2: "\uC228\uC774 \uB9C9\uD78C\uB2E4."
-    hintDisplay3: "\uC2DC\uC57C\uAC00 \uC881\uC544\uC9C4\uB2E4."
-  - energyMin: 250
-    energyMax: 290
-    hintDisplay1: "\uBD88\uAE38\uD55C \uAE30\uC6B4\uC774\uB2E4."
-    hintDisplay2: "\uB9E5\uC774 \uB04A\uAE34\uB2E4."
-    hintDisplay3: "\uB3CC\uC774\uD0AC \uC218 \uC5C6\uB2E4."
-  - energyMin: 300
-    energyMax: 300
-    hintDisplay1: "\uBB34\uC5B8\uAC00 \uC788\uB2E4."
-    hintDisplay2: "\uB05D\uC774 \uBCF4\uC774\uC9C0 \uC54A\uB294\uB2E4."
-    hintDisplay3: "\uAC00\uAE4C\uC774 \uC788\uB2E4."
-  economy:
+    auctionTypeOverride: English
+  auctions:
   - grade: 0
     tierId: 0
-    startingPriceMin: 30
-    startingPriceMax: 50
-    rewardGoldMin: 80
-    rewardGoldMax: 150
-    clearTimeSec: 1200
-    ebayDurationSec: 60
-    bidIncrement: 5
-    englishRoundSec: 15
+    bidType: 0
+    bidBandMin: 30
+    bidBandMax: 50
+    aiCountMin: 2
+    aiCountMax: 3
   - grade: 0
     tierId: 1
-    startingPriceMin: 50
-    startingPriceMax: 70
-    rewardGoldMin: 120
-    rewardGoldMax: 200
-    clearTimeSec: 1500
-    ebayDurationSec: 60
-    bidIncrement: 8
-    englishRoundSec: 15
+    bidType: 0
+    bidBandMin: 50
+    bidBandMax: 70
+    aiCountMin: 2
+    aiCountMax: 3
   - grade: 0
     tierId: 2
-    startingPriceMin: 70
-    startingPriceMax: 100
-    rewardGoldMin: 150
-    rewardGoldMax: 280
-    clearTimeSec: 1800
-    ebayDurationSec: 75
-    bidIncrement: 10
-    englishRoundSec: 15
+    bidType: 1
+    bidBandMin: 70
+    bidBandMax: 100
+    aiCountMin: 2
+    aiCountMax: 3
   - grade: 1
     tierId: 0
-    startingPriceMin: 50
-    startingPriceMax: 80
-    rewardGoldMin: 100
-    rewardGoldMax: 200
-    clearTimeSec: 1800
-    ebayDurationSec: 60
-    bidIncrement: 10
-    englishRoundSec: 15
+    bidType: 0
+    bidBandMin: 50
+    bidBandMax: 80
+    aiCountMin: 2
+    aiCountMax: 3
   - grade: 1
     tierId: 1
-    startingPriceMin: 80
-    startingPriceMax: 120
-    rewardGoldMin: 150
-    rewardGoldMax: 300
-    clearTimeSec: 2400
-    ebayDurationSec: 75
-    bidIncrement: 15
-    englishRoundSec: 15
+    bidType: 0
+    bidBandMin: 80
+    bidBandMax: 120
+    aiCountMin: 2
+    aiCountMax: 3
   - grade: 1
     tierId: 2
-    startingPriceMin: 120
-    startingPriceMax: 160
-    rewardGoldMin: 220
-    rewardGoldMax: 380
-    clearTimeSec: 2700
-    ebayDurationSec: 75
-    bidIncrement: 15
-    englishRoundSec: 15
+    bidType: 1
+    bidBandMin: 120
+    bidBandMax: 160
+    aiCountMin: 2
+    aiCountMax: 3
   - grade: 2
     tierId: 0
-    startingPriceMin: 100
-    startingPriceMax: 150
-    rewardGoldMin: 200
-    rewardGoldMax: 400
-    clearTimeSec: 2400
-    ebayDurationSec: 60
-    bidIncrement: 15
-    englishRoundSec: 15
+    bidType: 0
+    bidBandMin: 100
+    bidBandMax: 150
+    aiCountMin: 3
+    aiCountMax: 4
   - grade: 2
     tierId: 1
-    startingPriceMin: 150
-    startingPriceMax: 220
-    rewardGoldMin: 350
-    rewardGoldMax: 550
-    clearTimeSec: 3000
-    ebayDurationSec: 75
-    bidIncrement: 20
-    englishRoundSec: 15
+    bidType: 0
+    bidBandMin: 150
+    bidBandMax: 220
+    aiCountMin: 3
+    aiCountMax: 4
   - grade: 2
     tierId: 2
-    startingPriceMin: 220
-    startingPriceMax: 320
-    rewardGoldMin: 500
-    rewardGoldMax: 800
-    clearTimeSec: 3600
-    ebayDurationSec: 90
-    bidIncrement: 25
-    englishRoundSec: 15
+    bidType: 1
+    bidBandMin: 220
+    bidBandMax: 320
+    aiCountMin: 3
+    aiCountMax: 4
   - grade: 3
     tierId: 0
-    startingPriceMin: 180
-    startingPriceMax: 260
-    rewardGoldMin: 400
-    rewardGoldMax: 700
-    clearTimeSec: 3000
-    ebayDurationSec: 60
-    bidIncrement: 25
-    englishRoundSec: 15
+    bidType: 0
+    bidBandMin: 180
+    bidBandMax: 260
+    aiCountMin: 3
+    aiCountMax: 4
   - grade: 3
     tierId: 1
-    startingPriceMin: 260
-    startingPriceMax: 360
-    rewardGoldMin: 600
-    rewardGoldMax: 950
-    clearTimeSec: 3600
-    ebayDurationSec: 75
-    bidIncrement: 30
-    englishRoundSec: 15
+    bidType: 0
+    bidBandMin: 260
+    bidBandMax: 360
+    aiCountMin: 3
+    aiCountMax: 4
   - grade: 3
     tierId: 2
-    startingPriceMin: 360
-    startingPriceMax: 500
-    rewardGoldMin: 850
-    rewardGoldMax: 1300
-    clearTimeSec: 4200
-    ebayDurationSec: 90
-    bidIncrement: 40
-    englishRoundSec: 15
+    bidType: 1
+    bidBandMin: 360
+    bidBandMax: 500
+    aiCountMin: 3
+    aiCountMax: 4
   - grade: 4
     tierId: 0
-    startingPriceMin: 280
-    startingPriceMax: 380
-    rewardGoldMin: 500
-    rewardGoldMax: 900
-    clearTimeSec: 3600
-    ebayDurationSec: 60
-    bidIncrement: 30
-    englishRoundSec: 15
+    bidType: 0
+    bidBandMin: 280
+    bidBandMax: 380
+    aiCountMin: 3
+    aiCountMax: 5
   - grade: 4
     tierId: 1
-    startingPriceMin: 380
-    startingPriceMax: 500
-    rewardGoldMin: 750
-    rewardGoldMax: 1100
-    clearTimeSec: 4200
-    ebayDurationSec: 75
-    bidIncrement: 40
-    englishRoundSec: 15
+    bidType: 0
+    bidBandMin: 380
+    bidBandMax: 500
+    aiCountMin: 3
+    aiCountMax: 5
   - grade: 4
     tierId: 2
-    startingPriceMin: 500
-    startingPriceMax: 700
-    rewardGoldMin: 900
-    rewardGoldMax: 1400
-    clearTimeSec: 4800
-    ebayDurationSec: 90
-    bidIncrement: 50
-    englishRoundSec: 15
+    bidType: 1
+    bidBandMin: 500
+    bidBandMax: 700
+    aiCountMin: 3
+    aiCountMax: 5
   - grade: 5
     tierId: 0
-    startingPriceMin: 400
-    startingPriceMax: 550
-    rewardGoldMin: 800
-    rewardGoldMax: 1200
-    clearTimeSec: 4200
-    ebayDurationSec: 60
-    bidIncrement: 40
-    englishRoundSec: 15
+    bidType: 0
+    bidBandMin: 400
+    bidBandMax: 550
+    aiCountMin: 4
+    aiCountMax: 5
   - grade: 5
     tierId: 1
-    startingPriceMin: 550
-    startingPriceMax: 750
-    rewardGoldMin: 1100
-    rewardGoldMax: 1600
-    clearTimeSec: 4800
-    ebayDurationSec: 75
-    bidIncrement: 50
-    englishRoundSec: 15
+    bidType: 0
+    bidBandMin: 550
+    bidBandMax: 750
+    aiCountMin: 4
+    aiCountMax: 5
   - grade: 5
     tierId: 2
-    startingPriceMin: 750
-    startingPriceMax: 1000
-    rewardGoldMin: 1500
-    rewardGoldMax: 2200
-    clearTimeSec: 5400
-    ebayDurationSec: 90
-    bidIncrement: 75
-    englishRoundSec: 15
+    bidType: 1
+    bidBandMin: 750
+    bidBandMax: 1000
+    aiCountMin: 4
+    aiCountMax: 5
   - grade: 6
     tierId: 0
-    startingPriceMin: 600
-    startingPriceMax: 850
-    rewardGoldMin: 1200
-    rewardGoldMax: 1800
-    clearTimeSec: 4800
-    ebayDurationSec: 90
-    bidIncrement: 60
-    englishRoundSec: 15
+    bidType: 1
+    bidBandMin: 600
+    bidBandMax: 850
+    aiCountMin: 4
+    aiCountMax: 6
   - grade: 6
     tierId: 1
-    startingPriceMin: 850
-    startingPriceMax: 1150
-    rewardGoldMin: 1700
-    rewardGoldMax: 2500
-    clearTimeSec: 5400
-    ebayDurationSec: 90
-    bidIncrement: 80
-    englishRoundSec: 15
+    bidType: 1
+    bidBandMin: 850
+    bidBandMax: 1150
+    aiCountMin: 4
+    aiCountMax: 6
   - grade: 6
     tierId: 2
-    startingPriceMin: 1150
-    startingPriceMax: 1600
-    rewardGoldMin: 2400
-    rewardGoldMax: 3500
-    clearTimeSec: 6000
-    ebayDurationSec: 90
-    bidIncrement: 100
-    englishRoundSec: 15
+    bidType: 1
+    bidBandMin: 1150
+    bidBandMax: 1600
+    aiCountMin: 4
+    aiCountMax: 6
   - grade: 7
     tierId: 0
-    startingPriceMin: 900
-    startingPriceMax: 1250
-    rewardGoldMin: 1800
-    rewardGoldMax: 2700
-    clearTimeSec: 5400
-    ebayDurationSec: 90
-    bidIncrement: 80
-    englishRoundSec: 15
+    bidType: 1
+    bidBandMin: 900
+    bidBandMax: 1250
+    aiCountMin: 5
+    aiCountMax: 7
   - grade: 7
     tierId: 1
-    startingPriceMin: 1250
-    startingPriceMax: 1700
-    rewardGoldMin: 2600
-    rewardGoldMax: 3800
-    clearTimeSec: 6000
-    ebayDurationSec: 90
-    bidIncrement: 100
-    englishRoundSec: 15
+    bidType: 1
+    bidBandMin: 1250
+    bidBandMax: 1700
+    aiCountMin: 5
+    aiCountMax: 7
   - grade: 7
     tierId: 2
-    startingPriceMin: 1700
-    startingPriceMax: 2300
-    rewardGoldMin: 3600
-    rewardGoldMax: 5200
-    clearTimeSec: 6600
-    ebayDurationSec: 90
-    bidIncrement: 125
-    englishRoundSec: 15
+    bidType: 1
+    bidBandMin: 1700
+    bidBandMax: 2300
+    aiCountMin: 5
+    aiCountMax: 7
   - grade: 8
     tierId: 0
-    startingPriceMin: 1400
-    startingPriceMax: 1900
-    rewardGoldMin: 2800
-    rewardGoldMax: 4200
-    clearTimeSec: 6000
-    ebayDurationSec: 90
-    bidIncrement: 100
-    englishRoundSec: 15
+    bidType: 1
+    bidBandMin: 1400
+    bidBandMax: 1900
+    aiCountMin: 6
+    aiCountMax: 8
   - grade: 8
     tierId: 1
-    startingPriceMin: 1900
-    startingPriceMax: 2600
-    rewardGoldMin: 4000
-    rewardGoldMax: 5800
-    clearTimeSec: 6600
-    ebayDurationSec: 90
-    bidIncrement: 125
-    englishRoundSec: 15
+    bidType: 1
+    bidBandMin: 1900
+    bidBandMax: 2600
+    aiCountMin: 6
+    aiCountMax: 8
   - grade: 8
     tierId: 2
-    startingPriceMin: 2600
-    startingPriceMax: 3500
-    rewardGoldMin: 5500
-    rewardGoldMax: 8000
-    clearTimeSec: 7200
-    ebayDurationSec: 90
-    bidIncrement: 150
-    englishRoundSec: 15
+    bidType: 1
+    bidBandMin: 2600
+    bidBandMax: 3500
+    aiCountMin: 6
+    aiCountMax: 8
+  englishTimerTiers:
+  - bidCountGt: 0
+    timerSec: 60
+  - bidCountGt: 4
+    timerSec: 45
+  - bidCountGt: 7
+    timerSec: 30
+  - bidCountGt: 10
+    timerSec: 15
+  englishAiBehaviors:
+  - grade: 0
+    stepCountMin: 1
+    stepCountMax: 2
+    playerCounterStepMin: 0
+    playerCounterStepMax: 1
+    reactDelaySecMin: 10
+    reactDelaySecMax: 18
+    counterBidChancePct: 35
+  - grade: 1
+    stepCountMin: 1
+    stepCountMax: 2
+    playerCounterStepMin: 0
+    playerCounterStepMax: 1
+    reactDelaySecMin: 9
+    reactDelaySecMax: 16
+    counterBidChancePct: 40
+  - grade: 2
+    stepCountMin: 1
+    stepCountMax: 3
+    playerCounterStepMin: 1
+    playerCounterStepMax: 2
+    reactDelaySecMin: 8
+    reactDelaySecMax: 14
+    counterBidChancePct: 45
+  - grade: 3
+    stepCountMin: 1
+    stepCountMax: 3
+    playerCounterStepMin: 1
+    playerCounterStepMax: 2
+    reactDelaySecMin: 7
+    reactDelaySecMax: 12
+    counterBidChancePct: 50
+  - grade: 4
+    stepCountMin: 2
+    stepCountMax: 4
+    playerCounterStepMin: 1
+    playerCounterStepMax: 3
+    reactDelaySecMin: 6
+    reactDelaySecMax: 11
+    counterBidChancePct: 55
+  - grade: 5
+    stepCountMin: 2
+    stepCountMax: 4
+    playerCounterStepMin: 2
+    playerCounterStepMax: 3
+    reactDelaySecMin: 5
+    reactDelaySecMax: 10
+    counterBidChancePct: 60
+  - grade: 6
+    stepCountMin: 2
+    stepCountMax: 5
+    playerCounterStepMin: 2
+    playerCounterStepMax: 4
+    reactDelaySecMin: 4
+    reactDelaySecMax: 9
+    counterBidChancePct: 68
+  - grade: 7
+    stepCountMin: 3
+    stepCountMax: 6
+    playerCounterStepMin: 2
+    playerCounterStepMax: 4
+    reactDelaySecMin: 3
+    reactDelaySecMax: 8
+    counterBidChancePct: 75
+  - grade: 8
+    stepCountMin: 3
+    stepCountMax: 8
+    playerCounterStepMin: 3
+    playerCounterStepMax: 5
+    reactDelaySecMin: 2
+    reactDelaySecMax: 6
+    counterBidChancePct: 82
   unlocks:
   - buildingLevel: 1
     maxUnlockedGrade: 4
-    energyBarMax: 100
+    energyBarMax: 200
     auctionTabs: 0
   - buildingLevel: 2
     maxUnlockedGrade: 5
-    energyBarMax: 130
+    energyBarMax: 200
     auctionTabs: 0
   - buildingLevel: 3
     maxUnlockedGrade: 6
-    energyBarMax: 170
+    energyBarMax: 200
     auctionTabs: 0
   - buildingLevel: 4
     maxUnlockedGrade: 7
-    energyBarMax: 230
+    energyBarMax: 200
     auctionTabs: 1
   - buildingLevel: 5
     maxUnlockedGrade: 8
-    energyBarMax: 300
+    energyBarMax: 200
     auctionTabs: 1
   spawnWeights:
   - buildingLevel: 1
@@ -735,3 +629,683 @@ MonoBehaviour:
   - buildingLevel: 5
     grade: 8
     spawnWeight: 1
+  gradeBands:
+  - grade: 0
+    gradeBand: low
+  - grade: 1
+    gradeBand: low
+  - grade: 2
+    gradeBand: mid
+  - grade: 3
+    gradeBand: mid
+  - grade: 4
+    gradeBand: mid
+  - grade: 5
+    gradeBand: high
+  - grade: 6
+    gradeBand: high
+  - grade: 7
+    gradeBand: top
+  - grade: 8
+    gradeBand: top
+  constants:
+  - key: energy_percent_max
+    value: 200
+  - key: english_min_grade
+    value: S
+  - key: english_tier_id
+    value: 2
+  - key: ebay_bid_increment
+    value: 5
+  - key: english_bid_increment
+    value: 5
+  - key: english_ai_max_steps_per_bid
+    value: 8
+  - key: english_ai_eval_interval_sec
+    value: 1
+  brokerHints:
+  - archetype: gold
+    tierId: 0
+    hintText: "\uC6D4\uAE09\uC740 \uC904 \uC218 \uC788\uACA0\uB124\uC694."
+    hintInfo: "\uACE8\uB4DC \uBCF4\uC0C1"
+    upArrow: 1
+  - archetype: gold
+    tierId: 1
+    hintText: "\uC774 \uC815\uB3C4\uBA74 \uC785\uCC30\uAC00 \uC880 \uC62C\uB824\uB3C4
+      \uB418\uACA0\uB294\uB370\uC694?"
+    hintInfo: "\uACE8\uB4DC \uBCF4\uC0C1"
+    upArrow: 2
+  - archetype: gold
+    tierId: 2
+    hintText: "\uAE38\uB4DC\uC7A5\uB2D8, \uC774\uAC74 \uB2E4\uB4E4 \uD0D0\uB0B4\uB294
+      \uBB3C\uAC74\uC785\uB2C8\uB2E4."
+    hintInfo: "\uACE8\uB4DC \uBCF4\uC0C1"
+    upArrow: 3
+  - archetype: mineral
+    tierId: 0
+    hintText: "\uB545\uC740 \uB098\uC058\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."
+    hintInfo: "\uAD11\uBB3C \uBCF4\uC0C1"
+    upArrow: 1
+  - archetype: mineral
+    tierId: 1
+    hintText: "\uACBD\uD638\uC6D0\uBCF4\uB2E4 \uACE1\uAD2D\uC774\uAC00 \uB354 \uD544\uC694\uD560\uC9C0\uB3C4
+      \uBAA8\uB985\uB2C8\uB2E4."
+    hintInfo: "\uAD11\uBB3C \uBCF4\uC0C1"
+    upArrow: 2
+  - archetype: mineral
+    tierId: 2
+    hintText: "\uC774 \uC815\uB3C4\uBA74 \uAD11\uC0B0\uC774 \uAC8C\uC774\uD2B8 \uC548\uC5D0
+      \uC788\uB294 \uC218\uC900\uC785\uB2C8\uB2E4."
+    hintInfo: "\uAD11\uBB3C \uBCF4\uC0C1"
+    upArrow: 3
+  - archetype: equipment
+    tierId: 0
+    hintText: "\uC218\uB9AC\uBE44 \uC815\uB3C4\uB294 \uD68C\uC218 \uAC00\uB2A5\uD560
+      \uAC83 \uAC19\uC2B5\uB2C8\uB2E4."
+    hintInfo: "\uC7A5\uBE44 \uBCF4\uC0C1"
+    upArrow: 1
+  - archetype: equipment
+    tierId: 1
+    hintText: "\uBB34\uAE30 \uC7A5\uC0AC\uAFBC\uB4E4\uC774 \uAD00\uC2EC\uC744 \uBCF4\uC774\uACE0
+      \uC788\uC2B5\uB2C8\uB2E4."
+    hintInfo: "\uC7A5\uBE44 \uBCF4\uC0C1"
+    upArrow: 2
+  - archetype: equipment
+    tierId: 2
+    hintText: "\uBA85\uC7A5 \uACF5\uBC29\uC5D0\uC11C \uBA3C\uC800 \uC5F0\uB77D\uC774
+      \uC654\uC2B5\uB2C8\uB2E4."
+    hintInfo: "\uC7A5\uBE44 \uBCF4\uC0C1"
+    upArrow: 3
+  - archetype: artifact
+    tierId: 0
+    hintText: "\uBA3C\uC9C0\uB294 \uC880 \uD138\uC5B4\uBCFC \uAC00\uCE58\uAC00 \uC788\uACA0\uB124\uC694."
+    hintInfo: "\uC720\uBB3C \uBCF4\uC0C1"
+    upArrow: 1
+  - archetype: artifact
+    tierId: 1
+    hintText: "\uBC15\uBB3C\uAD00 \uCABD\uC5D0\uC11C \uBA3C\uC800 \uC5F0\uB77D\uC774
+      \uC654\uC2B5\uB2C8\uB2E4."
+    hintInfo: "\uC720\uBB3C \uBCF4\uC0C1"
+    upArrow: 2
+  - archetype: artifact
+    tierId: 2
+    hintText: "\uC774\uAC74 \uD314\uC9C0 \uB9D0\uACE0 \uC804\uC2DC\uD574\uC57C \uD560
+      \uC218\uB3C4 \uC788\uC2B5\uB2C8\uB2E4."
+    hintInfo: "\uC720\uBB3C \uBCF4\uC0C1"
+    upArrow: 3
+  - archetype: mutation
+    tierId: 0
+    hintText: "\uC22B\uC790\uAC00 \uC870\uAE08 \uC774\uC0C1\uD558\uAC8C \uC6C0\uC9C1\uC785\uB2C8\uB2E4."
+    hintInfo: "\uBCC0\uC774 \uBCF4\uC0C1"
+    upArrow: 1
+  - archetype: mutation
+    tierId: 1
+    hintText: "\uAC8C\uC774\uD2B8 \uBCF4\uACE0\uC11C\uAC00 \uC138 \uBC88 \uC218\uC815\uB410\uB2E4\uACE0
+      \uD569\uB2C8\uB2E4."
+    hintInfo: "\uBCC0\uC774 \uBCF4\uC0C1"
+    upArrow: 2
+  - archetype: mutation
+    tierId: 2
+    hintText: "\uCE21\uC815\uAE30\uAC00 \uCE21\uC815\uC744 \uAC70\uBD80\uD588\uC2B5\uB2C8\uB2E4."
+    hintInfo: "\uBCC0\uC774 \uBCF4\uC0C1"
+    upArrow: 3
+  archetypes:
+  - grade: 0
+    tierId: 0
+    archetype: gold
+    weight: 38
+  - grade: 0
+    tierId: 0
+    archetype: mineral
+    weight: 27
+  - grade: 0
+    tierId: 0
+    archetype: equipment
+    weight: 25
+  - grade: 0
+    tierId: 0
+    archetype: artifact
+    weight: 0
+  - grade: 0
+    tierId: 0
+    archetype: mutation
+    weight: 10
+  - grade: 0
+    tierId: 1
+    archetype: gold
+    weight: 38
+  - grade: 0
+    tierId: 1
+    archetype: mineral
+    weight: 27
+  - grade: 0
+    tierId: 1
+    archetype: equipment
+    weight: 25
+  - grade: 0
+    tierId: 1
+    archetype: artifact
+    weight: 0
+  - grade: 0
+    tierId: 1
+    archetype: mutation
+    weight: 10
+  - grade: 0
+    tierId: 2
+    archetype: gold
+    weight: 28
+  - grade: 0
+    tierId: 2
+    archetype: mineral
+    weight: 32
+  - grade: 0
+    tierId: 2
+    archetype: equipment
+    weight: 30
+  - grade: 0
+    tierId: 2
+    archetype: artifact
+    weight: 0
+  - grade: 0
+    tierId: 2
+    archetype: mutation
+    weight: 10
+  - grade: 1
+    tierId: 0
+    archetype: gold
+    weight: 38
+  - grade: 1
+    tierId: 0
+    archetype: mineral
+    weight: 27
+  - grade: 1
+    tierId: 0
+    archetype: equipment
+    weight: 25
+  - grade: 1
+    tierId: 0
+    archetype: artifact
+    weight: 0
+  - grade: 1
+    tierId: 0
+    archetype: mutation
+    weight: 10
+  - grade: 1
+    tierId: 1
+    archetype: gold
+    weight: 38
+  - grade: 1
+    tierId: 1
+    archetype: mineral
+    weight: 27
+  - grade: 1
+    tierId: 1
+    archetype: equipment
+    weight: 25
+  - grade: 1
+    tierId: 1
+    archetype: artifact
+    weight: 0
+  - grade: 1
+    tierId: 1
+    archetype: mutation
+    weight: 10
+  - grade: 1
+    tierId: 2
+    archetype: gold
+    weight: 28
+  - grade: 1
+    tierId: 2
+    archetype: mineral
+    weight: 32
+  - grade: 1
+    tierId: 2
+    archetype: equipment
+    weight: 30
+  - grade: 1
+    tierId: 2
+    archetype: artifact
+    weight: 0
+  - grade: 1
+    tierId: 2
+    archetype: mutation
+    weight: 10
+  - grade: 2
+    tierId: 0
+    archetype: gold
+    weight: 38
+  - grade: 2
+    tierId: 0
+    archetype: mineral
+    weight: 27
+  - grade: 2
+    tierId: 0
+    archetype: equipment
+    weight: 25
+  - grade: 2
+    tierId: 0
+    archetype: artifact
+    weight: 0
+  - grade: 2
+    tierId: 0
+    archetype: mutation
+    weight: 10
+  - grade: 2
+    tierId: 1
+    archetype: gold
+    weight: 38
+  - grade: 2
+    tierId: 1
+    archetype: mineral
+    weight: 27
+  - grade: 2
+    tierId: 1
+    archetype: equipment
+    weight: 25
+  - grade: 2
+    tierId: 1
+    archetype: artifact
+    weight: 0
+  - grade: 2
+    tierId: 1
+    archetype: mutation
+    weight: 10
+  - grade: 2
+    tierId: 2
+    archetype: gold
+    weight: 28
+  - grade: 2
+    tierId: 2
+    archetype: mineral
+    weight: 32
+  - grade: 2
+    tierId: 2
+    archetype: equipment
+    weight: 30
+  - grade: 2
+    tierId: 2
+    archetype: artifact
+    weight: 0
+  - grade: 2
+    tierId: 2
+    archetype: mutation
+    weight: 10
+  - grade: 3
+    tierId: 0
+    archetype: gold
+    weight: 37
+  - grade: 3
+    tierId: 0
+    archetype: mineral
+    weight: 25
+  - grade: 3
+    tierId: 0
+    archetype: equipment
+    weight: 25
+  - grade: 3
+    tierId: 0
+    archetype: artifact
+    weight: 3
+  - grade: 3
+    tierId: 0
+    archetype: mutation
+    weight: 10
+  - grade: 3
+    tierId: 1
+    archetype: gold
+    weight: 37
+  - grade: 3
+    tierId: 1
+    archetype: mineral
+    weight: 25
+  - grade: 3
+    tierId: 1
+    archetype: equipment
+    weight: 25
+  - grade: 3
+    tierId: 1
+    archetype: artifact
+    weight: 3
+  - grade: 3
+    tierId: 1
+    archetype: mutation
+    weight: 10
+  - grade: 3
+    tierId: 2
+    archetype: gold
+    weight: 37
+  - grade: 3
+    tierId: 2
+    archetype: mineral
+    weight: 25
+  - grade: 3
+    tierId: 2
+    archetype: equipment
+    weight: 25
+  - grade: 3
+    tierId: 2
+    archetype: artifact
+    weight: 3
+  - grade: 3
+    tierId: 2
+    archetype: mutation
+    weight: 10
+  - grade: 4
+    tierId: 0
+    archetype: gold
+    weight: 37
+  - grade: 4
+    tierId: 0
+    archetype: mineral
+    weight: 25
+  - grade: 4
+    tierId: 0
+    archetype: equipment
+    weight: 25
+  - grade: 4
+    tierId: 0
+    archetype: artifact
+    weight: 3
+  - grade: 4
+    tierId: 0
+    archetype: mutation
+    weight: 10
+  - grade: 4
+    tierId: 1
+    archetype: gold
+    weight: 37
+  - grade: 4
+    tierId: 1
+    archetype: mineral
+    weight: 25
+  - grade: 4
+    tierId: 1
+    archetype: equipment
+    weight: 25
+  - grade: 4
+    tierId: 1
+    archetype: artifact
+    weight: 3
+  - grade: 4
+    tierId: 1
+    archetype: mutation
+    weight: 10
+  - grade: 4
+    tierId: 2
+    archetype: gold
+    weight: 37
+  - grade: 4
+    tierId: 2
+    archetype: mineral
+    weight: 25
+  - grade: 4
+    tierId: 2
+    archetype: equipment
+    weight: 25
+  - grade: 4
+    tierId: 2
+    archetype: artifact
+    weight: 3
+  - grade: 4
+    tierId: 2
+    archetype: mutation
+    weight: 10
+  - grade: 5
+    tierId: 0
+    archetype: gold
+    weight: 35
+  - grade: 5
+    tierId: 0
+    archetype: mineral
+    weight: 25
+  - grade: 5
+    tierId: 0
+    archetype: equipment
+    weight: 25
+  - grade: 5
+    tierId: 0
+    archetype: artifact
+    weight: 5
+  - grade: 5
+    tierId: 0
+    archetype: mutation
+    weight: 10
+  - grade: 5
+    tierId: 1
+    archetype: gold
+    weight: 35
+  - grade: 5
+    tierId: 1
+    archetype: mineral
+    weight: 25
+  - grade: 5
+    tierId: 1
+    archetype: equipment
+    weight: 25
+  - grade: 5
+    tierId: 1
+    archetype: artifact
+    weight: 5
+  - grade: 5
+    tierId: 1
+    archetype: mutation
+    weight: 10
+  - grade: 5
+    tierId: 2
+    archetype: gold
+    weight: 35
+  - grade: 5
+    tierId: 2
+    archetype: mineral
+    weight: 25
+  - grade: 5
+    tierId: 2
+    archetype: equipment
+    weight: 25
+  - grade: 5
+    tierId: 2
+    archetype: artifact
+    weight: 5
+  - grade: 5
+    tierId: 2
+    archetype: mutation
+    weight: 10
+  - grade: 6
+    tierId: 0
+    archetype: gold
+    weight: 33
+  - grade: 6
+    tierId: 0
+    archetype: mineral
+    weight: 25
+  - grade: 6
+    tierId: 0
+    archetype: equipment
+    weight: 25
+  - grade: 6
+    tierId: 0
+    archetype: artifact
+    weight: 7
+  - grade: 6
+    tierId: 0
+    archetype: mutation
+    weight: 10
+  - grade: 6
+    tierId: 1
+    archetype: gold
+    weight: 33
+  - grade: 6
+    tierId: 1
+    archetype: mineral
+    weight: 25
+  - grade: 6
+    tierId: 1
+    archetype: equipment
+    weight: 25
+  - grade: 6
+    tierId: 1
+    archetype: artifact
+    weight: 7
+  - grade: 6
+    tierId: 1
+    archetype: mutation
+    weight: 10
+  - grade: 6
+    tierId: 2
+    archetype: gold
+    weight: 33
+  - grade: 6
+    tierId: 2
+    archetype: mineral
+    weight: 25
+  - grade: 6
+    tierId: 2
+    archetype: equipment
+    weight: 25
+  - grade: 6
+    tierId: 2
+    archetype: artifact
+    weight: 7
+  - grade: 6
+    tierId: 2
+    archetype: mutation
+    weight: 10
+  - grade: 7
+    tierId: 0
+    archetype: gold
+    weight: 31
+  - grade: 7
+    tierId: 0
+    archetype: mineral
+    weight: 25
+  - grade: 7
+    tierId: 0
+    archetype: equipment
+    weight: 25
+  - grade: 7
+    tierId: 0
+    archetype: artifact
+    weight: 9
+  - grade: 7
+    tierId: 0
+    archetype: mutation
+    weight: 10
+  - grade: 7
+    tierId: 1
+    archetype: gold
+    weight: 31
+  - grade: 7
+    tierId: 1
+    archetype: mineral
+    weight: 25
+  - grade: 7
+    tierId: 1
+    archetype: equipment
+    weight: 25
+  - grade: 7
+    tierId: 1
+    archetype: artifact
+    weight: 9
+  - grade: 7
+    tierId: 1
+    archetype: mutation
+    weight: 10
+  - grade: 7
+    tierId: 2
+    archetype: gold
+    weight: 31
+  - grade: 7
+    tierId: 2
+    archetype: mineral
+    weight: 25
+  - grade: 7
+    tierId: 2
+    archetype: equipment
+    weight: 25
+  - grade: 7
+    tierId: 2
+    archetype: artifact
+    weight: 9
+  - grade: 7
+    tierId: 2
+    archetype: mutation
+    weight: 10
+  - grade: 8
+    tierId: 0
+    archetype: gold
+    weight: 30
+  - grade: 8
+    tierId: 0
+    archetype: mineral
+    weight: 25
+  - grade: 8
+    tierId: 0
+    archetype: equipment
+    weight: 25
+  - grade: 8
+    tierId: 0
+    archetype: artifact
+    weight: 10
+  - grade: 8
+    tierId: 0
+    archetype: mutation
+    weight: 10
+  - grade: 8
+    tierId: 1
+    archetype: gold
+    weight: 30
+  - grade: 8
+    tierId: 1
+    archetype: mineral
+    weight: 25
+  - grade: 8
+    tierId: 1
+    archetype: equipment
+    weight: 25
+  - grade: 8
+    tierId: 1
+    archetype: artifact
+    weight: 10
+  - grade: 8
+    tierId: 1
+    archetype: mutation
+    weight: 10
+  - grade: 8
+    tierId: 2
+    archetype: gold
+    weight: 30
+  - grade: 8
+    tierId: 2
+    archetype: mineral
+    weight: 25
+  - grade: 8
+    tierId: 2
+    archetype: equipment
+    weight: 25
+  - grade: 8
+    tierId: 2
+    archetype: artifact
+    weight: 10
+  - grade: 8
+    tierId: 2
+    archetype: mutation
+    weight: 10
+  brokerPricing:
+  - grade: 0
+    hintCostPctOfMinBid: 8
+  - grade: 1
+    hintCostPctOfMinBid: 8
+  - grade: 2
+    hintCostPctOfMinBid: 7
+  - grade: 3
+    hintCostPctOfMinBid: 7
+  - grade: 4
+    hintCostPctOfMinBid: 6
+  - grade: 5
+    hintCostPctOfMinBid: 6
+  - grade: 6
+    hintCostPctOfMinBid: 5
+  - grade: 7
+    hintCostPctOfMinBid: 5
+  - grade: 8
+    hintCostPctOfMinBid: 5

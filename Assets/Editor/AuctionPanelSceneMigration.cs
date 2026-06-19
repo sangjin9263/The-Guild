@@ -4,7 +4,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>Main.unity 경매 UI를 Resources/AuctionPanel.prefab + Lot_prefab 기준으로 통일.</summary>
+/// <summary>Main.unity 경매 UI를 Resources/AuctionPanel.prefab + Lot_prefab_ebay 기준으로 통일.</summary>
 public static class AuctionPanelSceneMigration
 {
     private const string ScenePath = "Assets/Scenes/Main.unity";

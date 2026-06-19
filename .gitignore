@@ -48,6 +48,9 @@ Desktop.ini
 # Local dev captures
 Assets/Screenshots/
 
+# Unity editor recovery copies
+Assets/_Recovery/
+
 # TextMesh Pro sample content (not referenced by game scenes)
 Assets/TextMesh Pro/Examples & Extras/
 

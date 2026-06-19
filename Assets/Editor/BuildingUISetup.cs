@@ -1,5 +1,4 @@
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -169,107 +168,6 @@ public static class BuildingUISetup
             else
                 Object.DestroyImmediate(controller);
         }
-    }
-
-    public static void RemoveMisplacedBuildingClickables()
-    {
-        foreach (var controller in Object.FindObjectsByType<BuildingPanelUI>(
-                     FindObjectsInactive.Include,
-                     FindObjectsSortMode.None))
-        {
-            var host = controller.gameObject;
-            var misplacedClickable = host.GetComponent<BuildingClickable>();
-            if (misplacedClickable != null)
-                Object.DestroyImmediate(misplacedClickable);
-
-            var misplacedCollider = host.GetComponent<BoxCollider2D>();
-            if (misplacedCollider != null)
-                Object.DestroyImmediate(misplacedCollider);
-        }
-    }
-
-    public static void WireTownPropBuildings()
-    {
-        var town = Object.FindFirstObjectByType<TownPanelContent>(FindObjectsInactive.Include);
-        if (town == null)
-            return;
-
-        var props = town.transform.Find("Props");
-        if (props == null)
-            return;
-
-        for (var i = 0; i < props.childCount; i++)
-        {
-            var child = props.GetChild(i);
-            if (child.GetComponent<SpriteRenderer>() == null)
-                continue;
-
-            if (child.GetComponent<AuctionBuildingClickable>() != null)
-                continue;
-
-            if (child.name.StartsWith("Auction"))
-                continue;
-
-            WireBuildingObject(
-                child.gameObject,
-                "헌터 길드",
-                "HUNTER COMPANY\n용병 관리 · 파견. (준비 중)");
-        }
-    }
-
-    public static void WireBuildingClickables()
-    {
-        var buildingRoots = Object.FindObjectsByType<Transform>(FindObjectsSortMode.None);
-        foreach (var transform in buildingRoots)
-        {
-            if (!IsBuildingObjectName(transform.name))
-                continue;
-
-            WireBuildingObject(
-                transform.gameObject,
-                "Building 1",
-                "Guild building. Upgrade and manage mercenaries here.");
-        }
-    }
-
-    private static bool IsBuildingObjectName(string objectName)
-    {
-        if (string.IsNullOrEmpty(objectName))
-            return false;
-
-        if (objectName.StartsWith("Building"))
-            return true;
-
-        return objectName.Contains("건물") || objectName.Contains("BuildingLV");
-    }
-
-    private static void WireBuildingObject(GameObject buildingObject, string title, string description)
-    {
-        EnsureBuildingCollider(buildingObject);
-
-        var clickable = buildingObject.GetComponent<BuildingClickable>();
-        if (clickable == null)
-            clickable = buildingObject.AddComponent<BuildingClickable>();
-
-        var serialized = new SerializedObject(clickable);
-        serialized.FindProperty("buildingTitle").stringValue = title;
-        serialized.FindProperty("buildingDescription").stringValue = description;
-        serialized.ApplyModifiedPropertiesWithoutUndo();
-    }
-
-    private static void EnsureBuildingCollider(GameObject buildingObject)
-    {
-        if (buildingObject.GetComponent<Collider2D>() != null)
-            return;
-
-        var spriteRenderer = buildingObject.GetComponent<SpriteRenderer>();
-        var collider = buildingObject.AddComponent<BoxCollider2D>();
-        if (spriteRenderer == null || spriteRenderer.sprite == null)
-            return;
-
-        var bounds = spriteRenderer.sprite.bounds;
-        collider.size = bounds.size;
-        collider.offset = bounds.center;
     }
 
     private static GameObject CreatePanel(Transform parent)

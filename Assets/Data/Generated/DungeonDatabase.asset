@@ -1,0 +1,271 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 786005960c8070a49ae7dcdfd9292a72, type: 3}
+  m_Name: DungeonDatabase
+  m_EditorClassIdentifier: Assembly-CSharp::DungeonDatabase
+  lootPools:
+  - poolId: pool_mineral
+    itemKey: ore_iron
+    weight: 40
+    quantityMin: 2
+    quantityMax: 5
+  - poolId: pool_mineral
+    itemKey: ore_silver
+    weight: 30
+    quantityMin: 1
+    quantityMax: 3
+  - poolId: pool_mineral
+    itemKey: ore_gold
+    weight: 20
+    quantityMin: 1
+    quantityMax: 2
+  - poolId: pool_mineral
+    itemKey: crystal_mana
+    weight: 10
+    quantityMin: 1
+    quantityMax: 1
+  - poolId: pool_equipment
+    itemKey: normal_sword
+    weight: 35
+    quantityMin: 1
+    quantityMax: 1
+  - poolId: pool_equipment
+    itemKey: normal_bow
+    weight: 25
+    quantityMin: 1
+    quantityMax: 1
+  - poolId: pool_equipment
+    itemKey: leather_armor
+    weight: 25
+    quantityMin: 1
+    quantityMax: 1
+  - poolId: pool_equipment
+    itemKey: leather_helmet
+    weight: 15
+    quantityMin: 1
+    quantityMax: 1
+  - poolId: pool_artifact
+    itemKey: artifact_1
+    weight: 50
+    quantityMin: 1
+    quantityMax: 1
+  - poolId: pool_artifact
+    itemKey: artifact_2
+    weight: 50
+    quantityMin: 1
+    quantityMax: 1
+  archetypeLoot:
+  - archetype: gold
+    rewardKind: 0
+    lootPoolId: 
+  - archetype: mineral
+    rewardKind: 1
+    lootPoolId: pool_mineral
+  - archetype: equipment
+    rewardKind: 1
+    lootPoolId: pool_equipment
+  - archetype: artifact
+    rewardKind: 1
+    lootPoolId: pool_artifact
+  - archetype: mutation
+    rewardKind: 2
+    lootPoolId: 
+  clearRewards:
+  - grade: 0
+    tierId: 0
+    goldMin: 60
+    goldMax: 150
+    clearTimeSec: 1800
+  - grade: 0
+    tierId: 1
+    goldMin: 100
+    goldMax: 210
+    clearTimeSec: 2400
+  - grade: 0
+    tierId: 2
+    goldMin: 140
+    goldMax: 300
+    clearTimeSec: 3000
+  - grade: 1
+    tierId: 0
+    goldMin: 100
+    goldMax: 240
+    clearTimeSec: 1800
+  - grade: 1
+    tierId: 1
+    goldMin: 160
+    goldMax: 360
+    clearTimeSec: 2400
+  - grade: 1
+    tierId: 2
+    goldMin: 240
+    goldMax: 480
+    clearTimeSec: 3000
+  - grade: 2
+    tierId: 0
+    goldMin: 200
+    goldMax: 450
+    clearTimeSec: 1800
+  - grade: 2
+    tierId: 1
+    goldMin: 300
+    goldMax: 660
+    clearTimeSec: 2400
+  - grade: 2
+    tierId: 2
+    goldMin: 440
+    goldMax: 960
+    clearTimeSec: 3000
+  - grade: 3
+    tierId: 0
+    goldMin: 360
+    goldMax: 780
+    clearTimeSec: 1800
+  - grade: 3
+    tierId: 1
+    goldMin: 520
+    goldMax: 1080
+    clearTimeSec: 2400
+  - grade: 3
+    tierId: 2
+    goldMin: 720
+    goldMax: 1500
+    clearTimeSec: 3000
+  - grade: 4
+    tierId: 0
+    goldMin: 560
+    goldMax: 1140
+    clearTimeSec: 1800
+  - grade: 4
+    tierId: 1
+    goldMin: 760
+    goldMax: 1500
+    clearTimeSec: 2400
+  - grade: 4
+    tierId: 2
+    goldMin: 1000
+    goldMax: 2100
+    clearTimeSec: 3000
+  - grade: 5
+    tierId: 0
+    goldMin: 800
+    goldMax: 1650
+    clearTimeSec: 1800
+  - grade: 5
+    tierId: 1
+    goldMin: 1100
+    goldMax: 2250
+    clearTimeSec: 2400
+  - grade: 5
+    tierId: 2
+    goldMin: 1500
+    goldMax: 3000
+    clearTimeSec: 3000
+  - grade: 6
+    tierId: 0
+    goldMin: 1200
+    goldMax: 2550
+    clearTimeSec: 1800
+  - grade: 6
+    tierId: 1
+    goldMin: 1700
+    goldMax: 3450
+    clearTimeSec: 2400
+  - grade: 6
+    tierId: 2
+    goldMin: 2300
+    goldMax: 4800
+    clearTimeSec: 3000
+  - grade: 7
+    tierId: 0
+    goldMin: 1800
+    goldMax: 3750
+    clearTimeSec: 1800
+  - grade: 7
+    tierId: 1
+    goldMin: 2500
+    goldMax: 5100
+    clearTimeSec: 2400
+  - grade: 7
+    tierId: 2
+    goldMin: 3400
+    goldMax: 6900
+    clearTimeSec: 3000
+  - grade: 8
+    tierId: 0
+    goldMin: 2800
+    goldMax: 5700
+    clearTimeSec: 1800
+  - grade: 8
+    tierId: 1
+    goldMin: 3800
+    goldMax: 7800
+    clearTimeSec: 2400
+  - grade: 8
+    tierId: 2
+    goldMin: 5200
+    goldMax: 10500
+    clearTimeSec: 3000
+  mutationRewardMix:
+  - gradeMin: 0
+    gradeMax: 2
+    hiddenArchetype: gold
+    weight: 55
+    lootPoolId: 
+  - gradeMin: 0
+    gradeMax: 2
+    hiddenArchetype: mineral
+    weight: 25
+    lootPoolId: pool_mineral
+  - gradeMin: 0
+    gradeMax: 2
+    hiddenArchetype: equipment
+    weight: 20
+    lootPoolId: pool_equipment
+  - gradeMin: 3
+    gradeMax: 8
+    hiddenArchetype: gold
+    weight: 45
+    lootPoolId: 
+  - gradeMin: 3
+    gradeMax: 8
+    hiddenArchetype: mineral
+    weight: 25
+    lootPoolId: pool_mineral
+  - gradeMin: 3
+    gradeMax: 8
+    hiddenArchetype: equipment
+    weight: 20
+    lootPoolId: pool_equipment
+  - gradeMin: 3
+    gradeMax: 8
+    hiddenArchetype: artifact
+    weight: 10
+    lootPoolId: pool_artifact
+  mutationModifiers:
+  - modifierTier: standard
+    weight: 70
+    difficultyMult: 1.15
+    rewardMult: 1.25
+  - modifierTier: volatile
+    weight: 25
+    difficultyMult: 1.28
+    rewardMult: 1.4
+  - modifierTier: extreme
+    weight: 5
+    difficultyMult: 1.45
+    rewardMult: 1.6
+  constants:
+  - key: gold_roll_step
+    value: 5
+  - key: loot_roll_count
+    value: 1

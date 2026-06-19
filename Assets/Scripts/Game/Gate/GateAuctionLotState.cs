@@ -1,6 +1,8 @@
 public enum GateAuctionLotState
 {
-    Active = 0,
-    Sold = 1,
-    Expired = 2
+    Bidding = 0,
+    PendingResult = 1,
+    Won = 2,
+    Lost = 3,
+    Acknowledged = 4
 }

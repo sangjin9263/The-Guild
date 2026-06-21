@@ -74,11 +74,13 @@ public sealed class AuctionPanelFilterView : MonoBehaviour
 
     private void CacheUiRefs()
     {
-        _gradeDropdown = transform.Find("Content/Dropdown")?.GetComponent<TMP_Dropdown>();
-        _minBidInput = FindInputField("Content/Search_min/coin");
-        _minEnergyInput = FindInputField("Content/Search_min/energy");
-        _searchButton = transform.Find("Content/Search")?.GetComponent<Button>();
-        _resetButton = transform.Find("Content/Reset")?.GetComponent<Button>();
+        _gradeDropdown = FindUi("Content/Dropdown")?.GetComponent<TMP_Dropdown>();
+        _minBidInput = FindInputField("Content/Searchbar/coin")
+                       ?? FindInputField("Content/Search_min/coin");
+        _minEnergyInput = FindInputField("Content/Searchbar/energy")
+                          ?? FindInputField("Content/Search_min/energy");
+        _searchButton = FindUi("Content/Search")?.GetComponent<Button>();
+        _resetButton = FindUi("Content/Reset")?.GetComponent<Button>();
 
         if (_gradeDropdown == null)
             Debug.LogWarning("AuctionPanelFilterView: Content/Dropdown not found.", this);
@@ -90,9 +92,12 @@ public sealed class AuctionPanelFilterView : MonoBehaviour
 
     private TMP_InputField FindInputField(string containerPath)
     {
-        var container = transform.Find(containerPath);
+        var container = FindUi(containerPath);
         return container != null ? container.GetComponentInChildren<TMP_InputField>(true) : null;
     }
+
+    private Transform FindUi(string relativePath) =>
+        AuctionPanelLayoutFit.FindPanelTransform(transform, relativePath);
 
     private void WireButtons()
     {

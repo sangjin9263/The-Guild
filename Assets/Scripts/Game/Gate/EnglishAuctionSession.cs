@@ -250,7 +250,7 @@ public sealed class EnglishAuctionSession
         _participants[participantIndex].BidAmount = amount;
 
         if (participantIndex != 0 && PlayerEscrow > 0)
-            ClearPlayerBid();
+            PlayerEscrow = 0;
 
         if (participantIndex == 0)
             PlayerEscrow = amount;
@@ -369,7 +369,7 @@ public sealed class EnglishAuctionSession
         if (PlayerEscrow <= 0)
             return;
 
-        GameManager.Instance?.TrySpendGold(PlayerEscrow);
+        GameManager.Instance?.TrySpendGold(PlayerEscrow, allowDuringEnglishAuction: true);
         PlayerEscrow = 0;
     }
 

@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 경매 UI 세션 단위 Lot 풀. 패널을 열 때마다 10건 새로 롤합니다.
+/// 경매 UI 세션 단위 Lot 풀. 패널을 열 때마다 8건 새로 롤합니다.
 /// </summary>
 [DefaultExecutionOrder(-40)]
 public class GateAuctionManager : MonoBehaviour
 {
     public const int TestBuildingLevel = 5;
-    public const int MaxActiveLots = 10;
+    public const int MaxActiveLots = 8;
     private const int MaxRollAttempts = 200;
 
     public static GateAuctionManager Instance { get; private set; }
@@ -26,6 +26,33 @@ public class GateAuctionManager : MonoBehaviour
 
     public IReadOnlyList<GateAuctionLotRuntime> ActiveLots => _activeLots;
     public int ActiveEnglishLotId => _activeEnglishLotId;
+
+    public bool HasActiveEnglishSession
+    {
+        get
+        {
+            ClearStaleActiveEnglishLot();
+            if (_activeEnglishLotId <= 0)
+                return false;
+
+            var lot = FindLot(_activeEnglishLotId);
+            return lot?.EnglishSession?.IsActive == true;
+        }
+    }
+
+    /// <summary>English 라이브 경매 진행 중 — 힌트·Ebay 입찰 등 보조 골드 사용 차단.</summary>
+    public bool IsEnglishGoldSpendLocked
+    {
+        get
+        {
+            ClearStaleActiveEnglishLot();
+            if (_activeEnglishLotId <= 0)
+                return false;
+
+            var lot = FindLot(_activeEnglishLotId);
+            return lot?.EnglishSession?.IsActive == true;
+        }
+    }
 
     public GateDatabase Database
     {
@@ -86,12 +113,7 @@ public class GateAuctionManager : MonoBehaviour
         {
             var activeLot = FindLot(_activeEnglishLotId);
             if (activeLot?.EnglishSession != null && activeLot.EnglishSession.IsActive)
-            {
-                blockReason = "진행 중인 영국식 경매가 있습니다.";
-                return false;
-            }
-
-            _activeEnglishLotId = 0;
+                _activeEnglishLotId = 0;
         }
 
         foreach (var lot in _activeLots)
@@ -99,13 +121,10 @@ public class GateAuctionManager : MonoBehaviour
             if (lot.IsEnglish || !lot.HasUserBid)
                 continue;
 
-            if (lot.State == GateAuctionLotState.Acknowledged)
+            if (lot.State != GateAuctionLotState.PendingResult)
                 continue;
 
-            blockReason = lot.State == GateAuctionLotState.PendingResult
-                ? "입찰 결과를 기다리는 중입니다."
-                : "입찰 결과를 확인해 주세요.";
-
+            blockReason = "입찰 결과를 기다리는 중입니다.";
             return false;
         }
 
@@ -273,8 +292,15 @@ public class GateAuctionManager : MonoBehaviour
             return;
         }
 
-        lot.CompleteEnglishSession(playerWon, finalBid);
+        var winnerName = session.HasWinner
+            ? session.GetLeader()?.GuildName ?? string.Empty
+            : string.Empty;
+
+        lot.CompleteEnglishSession(playerWon, finalBid, winnerName);
         lot.ClearEnglishSession();
+
+        if (playerWon)
+            GameManager.Instance?.TryAddEntryTicket();
 
         if (_activeEnglishLotId == lotId)
             _activeEnglishLotId = 0;
@@ -288,8 +314,19 @@ public class GateAuctionManager : MonoBehaviour
         EnglishSessionChanged?.Invoke(0);
     }
 
+    public void CancelActiveEnglishSessionForPanelClose()
+    {
+        if (_activeEnglishLotId <= 0)
+            return;
+
+        TryWithdrawEnglishSession(_activeEnglishLotId);
+    }
+
     public bool TryBid(int lotId, int bidAmount)
     {
+        if (IsEnglishGoldSpendLocked)
+            return false;
+
         var lot = FindLot(lotId);
         if (lot == null || lot.Lot.auctionType != AuctionType.Ebay)
             return false;
@@ -317,15 +354,7 @@ public class GateAuctionManager : MonoBehaviour
         if (lot == null)
             return false;
 
-        if (lot.State == GateAuctionLotState.Won)
-        {
-            GameManager.Instance?.TryAddEntryTicket();
-            lot.MarkAcknowledged();
-            NotifyChanged();
-            return true;
-        }
-
-        if (lot.State == GateAuctionLotState.Lost)
+        if (lot.State is GateAuctionLotState.Won or GateAuctionLotState.Lost)
         {
             lot.MarkAcknowledged();
             NotifyChanged();
@@ -338,6 +367,14 @@ public class GateAuctionManager : MonoBehaviour
     public bool TryPurchaseHint(int lotId)
     {
         var lot = FindLot(lotId);
+        var activeEnglishLot = _activeEnglishLotId > 0 &&
+                               lot != null &&
+                               lot.LotId == _activeEnglishLotId &&
+                               lot.EnglishSession?.IsActive == true;
+
+        if (IsEnglishGoldSpendLocked && !activeEnglishLot)
+            return false;
+
         if (lot == null || lot.HintPurchased)
             return false;
 
@@ -350,7 +387,7 @@ public class GateAuctionManager : MonoBehaviour
 
         var cost = database.GetBrokerHintCost(lot.Lot.grade, lot.Lot.auction.bidBandMin);
         var game = GameManager.Instance;
-        if (game == null || !game.TrySpendGold(cost))
+        if (game == null || !game.TrySpendGold(cost, allowDuringEnglishAuction: activeEnglishLot))
             return false;
 
         if (!database.TryGetBrokerHint(lot.Lot.archetype, lot.Lot.tierId, out var hint))
@@ -425,14 +462,16 @@ public class GateAuctionManager : MonoBehaviour
             bandMax = bandMin;
 
         var openingBid = RollOpeningBid(lot, increment);
-        var aiBids = RollAiBids(bandMin, bandMax, increment, GateAuctionLotRuntime.AiBidderCount);
+        var aiBidderCount = GateAuctionLotRuntime.AiBidderCount;
+        var aiBids = RollAiBids(bandMin, bandMax, increment, aiBidderCount);
 
         return new GateAuctionLotRuntime(
             _nextLotId++,
             lot,
             openingBid,
             increment,
-            aiBids);
+            aiBids,
+            GuildCombatPower.DefaultAiCombatPowers);
     }
 
     private GateAuctionLotRuntime CreateEnglishLot(GateLot lot)
@@ -496,22 +535,29 @@ public class GateAuctionManager : MonoBehaviour
     private void ResolveEbayLot(GateAuctionLotRuntime lot)
     {
         var userBid = lot.UserBid.GetValueOrDefault();
-        var highestAiBid = lot.HighestAiBid;
+        var resolve = lot.ResolveEbay(GuildCombatPower.GetPlayerPower());
 
-        if (userBid > highestAiBid)
+        if (resolve.PlayerWins)
         {
             lot.MarkWon();
+            GameManager.Instance?.TryAddEntryTicket();
             Debug.Log(
-                $"[GateAuction] Win lot={lot.LotId} {lot.Lot.grade} t{lot.Lot.tierId} " +
-                $"user={userBid}g aiMax={highestAiBid}g — 확인 후 입장권 지급");
+                resolve.BidAmountTie
+                    ? $"[GateAuction] Win lot={lot.LotId} {lot.Lot.grade} t{lot.Lot.tierId} " +
+                      $"user={userBid}g tie power={resolve.PlayerPower} — 입장권 지급"
+                    : $"[GateAuction] Win lot={lot.LotId} {lot.Lot.grade} t{lot.Lot.tierId} " +
+                      $"user={userBid}g aiMax={lot.HighestAiBid}g — 입장권 지급");
             return;
         }
 
         GameManager.Instance?.TryAddGold(userBid);
         lot.MarkLost();
         Debug.Log(
-            $"[GateAuction] Lose lot={lot.LotId} {lot.Lot.grade} t{lot.Lot.tierId} " +
-            $"user={userBid}g aiMax={highestAiBid}g — {userBid}g 환불");
+            resolve.BidAmountTie
+                ? $"[GateAuction] Lose lot={lot.LotId} {lot.Lot.grade} t{lot.Lot.tierId} " +
+                  $"user={userBid}g tie power={resolve.PlayerPower} vs {resolve.WinningPower} — {userBid}g 환불"
+                : $"[GateAuction] Lose lot={lot.LotId} {lot.Lot.grade} t{lot.Lot.tierId} " +
+                  $"user={userBid}g aiMax={lot.HighestAiBid}g — {userBid}g 환불");
     }
 
     private int RollOpeningBid(GateLot lot, int increment)

@@ -13,7 +13,8 @@ public class AuctionPanelUI : MonoBehaviour
     [SerializeField] private Vector2 panelPadding = Vector2.zero;
 
     private AuctionPanelController _panelController;
-    private string _defaultBodyText = "10건 진열 · Ebay 경매";
+    private AuctionPanelLayoutFit _layoutFit;
+    private string _defaultBodyText = "8건 진열 · Ebay / English 경매";
 
     public Vector2 PanelPadding => panelPadding;
 
@@ -30,8 +31,12 @@ public class AuctionPanelUI : MonoBehaviour
         if (panelRoot != null)
             panelRoot.SetActive(false);
 
+        ResolveCloseButton();
         if (closeButton != null)
+        {
+            closeButton.onClick.RemoveListener(OnCloseClicked);
             closeButton.onClick.AddListener(OnCloseClicked);
+        }
 
         _panelController = GetComponent<AuctionPanelController>();
         var controllerHost = panelRoot != null ? panelRoot : gameObject;
@@ -43,13 +48,30 @@ public class AuctionPanelUI : MonoBehaviour
         GateAuctionManager.AuctionsChanged += OnAuctionsChanged;
         GateAuctionManager.EnglishSessionChanged += OnEnglishSessionChanged;
         ConfigurePanelRaycasts();
+        ResolveLayoutFit();
         ApplyToAuctionZone();
+    }
+
+    private void OnEnable()
+    {
+        WorkspaceLayoutController.LayoutApplied += HandleLayoutApplied;
+    }
+
+    private void OnDisable()
+    {
+        WorkspaceLayoutController.LayoutApplied -= HandleLayoutApplied;
+    }
+
+    private void HandleLayoutApplied()
+    {
+        ApplyPanelLayoutFit();
     }
 
     private void OnDestroy()
     {
         GateAuctionManager.AuctionsChanged -= OnAuctionsChanged;
         GateAuctionManager.EnglishSessionChanged -= OnEnglishSessionChanged;
+        WorkspaceLayoutController.LayoutApplied -= HandleLayoutApplied;
 
         if (Instance == this)
             Instance = null;
@@ -95,6 +117,8 @@ public class AuctionPanelUI : MonoBehaviour
 
         BringAuctionFrameToFront();
         ApplyPanelToAuctionZone();
+        ApplyPanelLayoutFit();
+        ResolveCloseButton();
 
         if (titleText != null)
             titleText.text = "게이트 경매장";
@@ -112,8 +136,9 @@ public class AuctionPanelUI : MonoBehaviour
             _panelController = host.GetComponent<AuctionPanelController>();
         }
 
-        GateAuctionManager.Instance?.RefreshLotsOnPanelOpen();
         _panelController?.PrepareForPanelOpen();
+
+        GateAuctionManager.Instance?.RefreshLotsOnPanelOpen();
         _panelController?.RefreshFromManager();
     }
 
@@ -125,8 +150,21 @@ public class AuctionPanelUI : MonoBehaviour
 
     public bool TryHide()
     {
-        if (!CanClose())
-            return false;
+        var manager = GateAuctionManager.Instance;
+        if (manager != null)
+        {
+            if (manager.HasActiveEnglishSession)
+                manager.CancelActiveEnglishSessionForPanelClose();
+
+            _panelController?.DismissEnglishModal();
+
+            if (!manager.CanCloseAuctionPanel(out var reason))
+            {
+                if (bodyText != null)
+                    bodyText.text = reason;
+                return false;
+            }
+        }
 
         Hide();
         return true;
@@ -135,6 +173,9 @@ public class AuctionPanelUI : MonoBehaviour
     public bool CanClose()
     {
         if (GateAuctionManager.Instance == null)
+            return true;
+
+        if (GateAuctionManager.Instance.HasActiveEnglishSession)
             return true;
 
         if (GateAuctionManager.Instance.CanCloseAuctionPanel(out var reason))
@@ -148,6 +189,19 @@ public class AuctionPanelUI : MonoBehaviour
 
     private void OnCloseClicked() => TryHide();
 
+    private void ResolveCloseButton()
+    {
+        if (panelRoot == null)
+            return;
+
+        var found = AuctionPanelLayoutFit
+            .FindPanelTransform(panelRoot.transform, "TitleBar/ButtonX")
+            ?.GetComponent<Button>();
+
+        if (found != null)
+            closeButton = found;
+    }
+
     private void ApplyPanelToAuctionZone()
     {
         var auctionZone = WorkspaceLayoutController.Instance != null
@@ -157,10 +211,32 @@ public class AuctionPanelUI : MonoBehaviour
         if (auctionZone != null)
         {
             auctionZone.ApplyAuctionZoneLayout();
+            ApplyPanelLayoutFit();
             return;
         }
 
         ApplyPanelRectFallback();
+        ApplyPanelLayoutFit();
+    }
+
+    private void ResolveLayoutFit()
+    {
+        if (_layoutFit != null)
+            return;
+
+        if (panelRoot == null)
+            return;
+
+        _layoutFit = panelRoot.GetComponent<AuctionPanelLayoutFit>();
+        if (_layoutFit == null)
+            _layoutFit = panelRoot.AddComponent<AuctionPanelLayoutFit>();
+    }
+
+    private void ApplyPanelLayoutFit()
+    {
+        ResolveLayoutFit();
+        _layoutFit?.EnsureDesignRoot();
+        _layoutFit?.ApplyFit();
     }
 
     private void ApplyPanelRectFallback()

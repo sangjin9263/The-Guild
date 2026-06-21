@@ -353,8 +353,14 @@ public static class AuctionPanelScrollSetup
 
     private static void EnsureStartAuctionModalChild(GameObject panelRoot)
     {
-        const string modalPath = "Assets/Resources/Prefabs/UI/start_auction.prefab";
-        if (panelRoot.transform.Find("start_auction") != null)
+        const string modalPath = "Assets/Resources/Prefabs/UI/start_auction_re.prefab";
+        const string modalName = "start_auction_re";
+
+        var legacy = panelRoot.transform.Find("start_auction");
+        if (legacy != null)
+            Object.DestroyImmediate(legacy.gameObject);
+
+        if (panelRoot.transform.Find(modalName) != null)
             return;
 
         var modalPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(modalPath);
@@ -365,7 +371,7 @@ public static class AuctionPanelScrollSetup
         }
 
         var instance = (GameObject)PrefabUtility.InstantiatePrefab(modalPrefab, panelRoot.transform);
-        instance.name = "start_auction";
+        instance.name = modalName;
         var rect = instance.GetComponent<RectTransform>();
         if (rect != null)
         {

@@ -30,8 +30,6 @@ public sealed class AuctionLotRowView : MonoBehaviour, IAuctionLotRowView
     private TextMeshProUGUI _statusText;
     private GateHintRowView _hintRowView;
     private Button _bidButton;
-    private Button _upButton;
-    private Button _downButton;
     private Button _ackButton;
     private ProgressBar _energyBar;
     private Image _gateIconImage;
@@ -46,7 +44,6 @@ public sealed class AuctionLotRowView : MonoBehaviour, IAuctionLotRowView
     private TextMeshProUGUI _playerBidText;
     private readonly TextMeshProUGUI[] _aiBidTexts = new TextMeshProUGUI[GateAuctionLotRuntime.AiBidderCount];
 
-    private int _selectedBid;
     private int _minBidGold;
 
     private void Awake()
@@ -63,18 +60,6 @@ public sealed class AuctionLotRowView : MonoBehaviour, IAuctionLotRowView
         {
             _bidButton.onClick.RemoveListener(OnBidClicked);
             _bidButton.onClick.AddListener(OnBidClicked);
-        }
-
-        if (_upButton != null)
-        {
-            _upButton.onClick.RemoveListener(OnBidUp);
-            _upButton.onClick.AddListener(OnBidUp);
-        }
-
-        if (_downButton != null)
-        {
-            _downButton.onClick.RemoveListener(OnBidDown);
-            _downButton.onClick.AddListener(OnBidDown);
         }
 
         if (_ackButton != null)
@@ -94,10 +79,6 @@ public sealed class AuctionLotRowView : MonoBehaviour, IAuctionLotRowView
     {
         if (_bidButton != null)
             _bidButton.onClick.RemoveListener(OnBidClicked);
-        if (_upButton != null)
-            _upButton.onClick.RemoveListener(OnBidUp);
-        if (_downButton != null)
-            _downButton.onClick.RemoveListener(OnBidDown);
         if (_ackButton != null)
             _ackButton.onClick.RemoveListener(OnAckClicked);
         if (_bidInput != null)
@@ -119,7 +100,6 @@ public sealed class AuctionLotRowView : MonoBehaviour, IAuctionLotRowView
         gameObject.SetActive(true);
 
         _minBidGold = lot.UserMinBid;
-        _selectedBid = Mathf.Max(lot.OpeningBid, _minBidGold);
         EnsureUiRefs();
         RefreshStaticFields();
         _hintRowView?.Bind(lot, database);
@@ -143,14 +123,6 @@ public sealed class AuctionLotRowView : MonoBehaviour, IAuctionLotRowView
         var bidGo = FindTransform($"{BidRootPath}/start_bid");
         if (bidGo != null)
             _bidButton = bidGo.GetComponent<Button>();
-
-        var upGo = FindTransform($"{BidRootPath}/input_gold/Up");
-        if (upGo != null)
-            _upButton = upGo.GetComponent<Button>();
-
-        var downGo = FindTransform($"{BidRootPath}/input_gold/Down");
-        if (downGo != null)
-            _downButton = downGo.GetComponent<Button>();
 
         var energyGo = FindTransform("Gate_Info/Energy_Percent");
         if (energyGo != null)
@@ -376,15 +348,17 @@ public sealed class AuctionLotRowView : MonoBehaviour, IAuctionLotRowView
         AuctionBidInputUtility.ClearInput(_bidInput);
     }
 
+    private int GetEmptyInputBidAmount() => _minBidGold + BidStep();
+
     private int CommitBidFromInput()
     {
-        _selectedBid = AuctionBidInputUtility.ResolveAmount(
-            _bidInput, _selectedBid, _minBidGold, BidStep());
+        var amount = AuctionBidInputUtility.ResolveAmount(
+            _bidInput, GetEmptyInputBidAmount(), _minBidGold, BidStep());
 
         if (AuctionBidInputUtility.HasUserInput(_bidInput))
-            AuctionBidInputUtility.SetAmount(_bidInput, _selectedBid);
+            AuctionBidInputUtility.SetAmount(_bidInput, amount);
 
-        return _selectedBid;
+        return amount;
     }
 
     public void RefreshInteractiveState()
@@ -395,18 +369,17 @@ public sealed class AuctionLotRowView : MonoBehaviour, IAuctionLotRowView
         _hintRowView?.Refresh();
 
         var canEditBid = _lot.State == GateAuctionLotState.Bidding;
+        var englishGoldLocked = GateAuctionManager.Instance != null &&
+                                GateAuctionManager.Instance.IsEnglishGoldSpendLocked;
+        var canPlaceBid = canEditBid && !englishGoldLocked;
         var showResult = _lot.State == GateAuctionLotState.PendingResult
                          || _lot.State == GateAuctionLotState.Won
                          || _lot.State == GateAuctionLotState.Lost;
 
         if (_bidButton != null)
-            _bidButton.interactable = canEditBid;
-        if (_upButton != null)
-            _upButton.interactable = canEditBid;
-        if (_downButton != null)
-            _downButton.interactable = canEditBid;
+            _bidButton.interactable = canPlaceBid;
         if (_bidInput != null)
-            _bidInput.interactable = canEditBid;
+            _bidInput.interactable = canPlaceBid;
 
         if (_lot.State == GateAuctionLotState.Acknowledged)
         {
@@ -472,25 +445,9 @@ public sealed class AuctionLotRowView : MonoBehaviour, IAuctionLotRowView
         if (!AuctionBidInputUtility.HasUserInput(_bidInput))
             return;
 
-        _selectedBid = AuctionBidInputUtility.ResolveAmount(
-            _bidInput, _selectedBid, _minBidGold, BidStep());
-        AuctionBidInputUtility.SetAmount(_bidInput, _selectedBid);
-    }
-
-    private void OnBidUp()
-    {
-        if (_lot == null || _lot.State != GateAuctionLotState.Bidding)
-            return;
-
-        _selectedBid = Mathf.Max(_selectedBid + BidStep(), _minBidGold);
-    }
-
-    private void OnBidDown()
-    {
-        if (_lot == null || _lot.State != GateAuctionLotState.Bidding)
-            return;
-
-        _selectedBid = Mathf.Max(_selectedBid - BidStep(), _minBidGold);
+        var amount = AuctionBidInputUtility.ResolveAmount(
+            _bidInput, GetEmptyInputBidAmount(), _minBidGold, BidStep());
+        AuctionBidInputUtility.SetAmount(_bidInput, amount);
     }
 
     private void OnBidClicked()

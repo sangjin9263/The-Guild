@@ -236,6 +236,12 @@ public static class WorkspaceLayoutSetup
         }
 
         ApplyAuctionPanelLayout(panelRoot);
+        EnsureAuctionPanelLayoutFitInScene(panelRoot);
+    }
+
+    private static void EnsureAuctionPanelLayoutFitInScene(GameObject panelRoot)
+    {
+        AuctionPanelSceneMigration.EnsureAuctionPanelLayoutFit(panelRoot);
     }
 
     private static void ApplyAuctionPanelLayout(GameObject panelRoot)
@@ -900,7 +906,7 @@ public static class WorkspaceLayoutSetup
 
     private static GameObject CreateAuctionPanel(Transform parent)
     {
-        const string prefabPath = "Assets/Resources/Prefabs/UI/AuctionPanel.prefab";
+        const string prefabPath = AuctionPanelSceneMigration.AuctionPanelShellPrefabPath;
         var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
         if (prefab == null)
         {

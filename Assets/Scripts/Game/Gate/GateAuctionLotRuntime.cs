@@ -12,8 +12,11 @@ public sealed class GateAuctionLotRuntime
     public int OpeningBid { get; }
     public int BidIncrement { get; }
     public IReadOnlyList<int> AiBids { get; }
+    public IReadOnlyList<int> AiCombatPowers { get; }
     public int HighestAiBid { get; }
     public int? UserBid { get; private set; }
+
+    public EbayBidResolveSnapshot LastEbayResolve { get; private set; }
 
     private float _endsAtUnscaledTime;
     private const float NoTimer = float.PositiveInfinity;
@@ -34,13 +37,20 @@ public sealed class GateAuctionLotRuntime
     public string BrokerHintInfoText { get; private set; } = string.Empty;
     public int BrokerHintUpArrow { get; private set; }
 
-    public GateAuctionLotRuntime(int lotId, GateLot lot, int openingBid, int bidIncrement, IReadOnlyList<int> aiBids)
+    public GateAuctionLotRuntime(
+        int lotId,
+        GateLot lot,
+        int openingBid,
+        int bidIncrement,
+        IReadOnlyList<int> aiBids,
+        IReadOnlyList<int> aiCombatPowers = null)
     {
         LotId = lotId;
         Lot = lot;
         OpeningBid = openingBid;
         BidIncrement = Mathf.Max(1, bidIncrement);
         AiBids = aiBids ?? System.Array.Empty<int>();
+        AiCombatPowers = aiCombatPowers ?? System.Array.Empty<int>();
         HighestAiBid = ResolveHighestAiBid(AiBids);
         State = GateAuctionLotState.Bidding;
         _endsAtUnscaledTime = NoTimer;
@@ -81,6 +91,7 @@ public sealed class GateAuctionLotRuntime
     }
 
     public bool PlayerWonAuction { get; private set; }
+    public string EnglishWinnerGuildName { get; private set; } = string.Empty;
 
     public void MarkWon()
     {
@@ -92,6 +103,62 @@ public sealed class GateAuctionLotRuntime
     {
         PlayerWonAuction = false;
         State = GateAuctionLotState.Lost;
+    }
+
+    public int GetAiCombatPower(int aiIndex) =>
+        aiIndex >= 0 && aiIndex < AiCombatPowers.Count
+            ? AiCombatPowers[aiIndex]
+            : GuildCombatPower.GetAiPower(aiIndex);
+
+    /// <summary>Ebay 낙찰: 입찰가 우선, 동점이면 전투력 높은 쪽, 전투력 동률이면 플레이어.</summary>
+    public EbayBidResolveSnapshot ResolveEbay(int playerPower)
+    {
+        var userBid = UserBid.GetValueOrDefault();
+
+        if (userBid > HighestAiBid)
+        {
+            LastEbayResolve = new EbayBidResolveSnapshot(
+                playerWins: true,
+                bidAmountTie: false,
+                powerEqualTie: false,
+                playerPower,
+                winningPower: playerPower);
+            return LastEbayResolve;
+        }
+
+        if (userBid < HighestAiBid)
+        {
+            LastEbayResolve = new EbayBidResolveSnapshot(
+                playerWins: false,
+                bidAmountTie: false,
+                powerEqualTie: false,
+                playerPower,
+                winningPower: 0);
+            return LastEbayResolve;
+        }
+
+        var bestPower = playerPower;
+        var powerEqualTie = false;
+
+        for (var i = 0; i < AiBids.Count; i++)
+        {
+            if (AiBids[i] != userBid)
+                continue;
+
+            var aiPower = GetAiCombatPower(i);
+            if (aiPower > bestPower)
+                bestPower = aiPower;
+            else if (aiPower == playerPower)
+                powerEqualTie = true;
+        }
+
+        LastEbayResolve = new EbayBidResolveSnapshot(
+            playerWins: playerPower >= bestPower,
+            bidAmountTie: true,
+            powerEqualTie,
+            playerPower,
+            bestPower);
+        return LastEbayResolve;
     }
 
     public void MarkAcknowledged() => State = GateAuctionLotState.Acknowledged;
@@ -113,9 +180,10 @@ public sealed class GateAuctionLotRuntime
 
     public void ClearEnglishSession() => EnglishSession = null;
 
-    public void CompleteEnglishSession(bool playerWon, int finalBid)
+    public void CompleteEnglishSession(bool playerWon, int finalBid, string winnerGuildName)
     {
         EnglishSession = null;
+        EnglishWinnerGuildName = winnerGuildName ?? string.Empty;
 
         if (playerWon)
         {

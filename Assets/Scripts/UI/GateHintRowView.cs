@@ -68,7 +68,11 @@ public sealed class GateHintRowView : MonoBehaviour
         if (_lot == null || _database == null)
             return;
 
-        var canPurchase = _lot.State == GateAuctionLotState.Bidding && !_lot.HintPurchased;
+        var englishGoldLocked = GateAuctionManager.Instance != null &&
+                                GateAuctionManager.Instance.IsEnglishGoldSpendLocked;
+        var canPurchase = _lot.State == GateAuctionLotState.Bidding &&
+                          !_lot.HintPurchased &&
+                          !englishGoldLocked;
         var readyToPeel = _lot.HintPurchased && !_lot.HintRevealed;
         var revealed = _lot.HintRevealed;
 

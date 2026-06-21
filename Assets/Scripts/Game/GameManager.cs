@@ -87,8 +87,13 @@ public class GameManager : MonoBehaviour
         return true;
     }
 
-    public bool TrySpendGold(int amount)
+    public bool TrySpendGold(int amount, bool allowDuringEnglishAuction = false)
     {
+        if (!allowDuringEnglishAuction &&
+            GateAuctionManager.Instance != null &&
+            GateAuctionManager.Instance.IsEnglishGoldSpendLocked)
+            return false;
+
         if (amount <= 0 || gold < amount)
             return false;
 

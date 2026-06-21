@@ -5,6 +5,8 @@ using UnityEngine.UI;
 
 public static class BuildingUISetup
 {
+    private const string BuildingPanelPrefabPath = "Assets/Resources/Prefabs/UI/BuildingPanel.prefab";
+
     public static void EnsureBuildingPanel()
     {
         if (Object.FindFirstObjectByType<EventSystem>() == null)
@@ -31,21 +33,12 @@ public static class BuildingUISetup
         CleanupDuplicateBuildingUiCanvas();
 
         var panelRoot = FindOrCreateBuildingPanel(uiZonePanel);
-        var closeButton = panelRoot.transform.Find("CloseButton")?.GetComponent<Button>();
-
         var controller = workspace.GetComponent<BuildingPanelUI>();
         if (controller == null)
             controller = workspace.AddComponent<BuildingPanelUI>();
 
-        var buildingSerialized = new SerializedObject(controller);
-        buildingSerialized.FindProperty("panelRoot").objectReferenceValue = panelRoot;
-        buildingSerialized.FindProperty("titleText").objectReferenceValue =
-            panelRoot.transform.Find("Title")?.GetComponent<Text>();
-        buildingSerialized.FindProperty("bodyText").objectReferenceValue =
-            panelRoot.transform.Find("Body")?.GetComponent<Text>();
-        buildingSerialized.FindProperty("closeButton").objectReferenceValue = closeButton;
-        buildingSerialized.ApplyModifiedPropertiesWithoutUndo();
-
+        BuildingPanelSceneMigration.WireBuildingPanelUi(panelRoot);
+        BuildingPanelSceneMigration.EnsureBuildingPanelLayoutFit(panelRoot);
         WireUiZonePanelContent(uiZonePanel, panelRoot);
         DestroyLegacyBuildingUiCanvas();
     }
@@ -84,11 +77,29 @@ public static class BuildingUISetup
             if (legacyPanel != null)
             {
                 legacyPanel.SetParent(uiZonePanel, false);
+                StretchFull(legacyPanel.GetComponent<RectTransform>());
                 return legacyPanel.gameObject;
             }
         }
 
-        return CreatePanel(uiZonePanel);
+        return CreateBuildingPanelFromPrefab(uiZonePanel);
+    }
+
+    private static GameObject CreateBuildingPanelFromPrefab(Transform parent)
+    {
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(BuildingPanelPrefabPath);
+        if (prefab == null)
+        {
+            Debug.LogError($"BuildingUISetup: BuildingPanel prefab not found at {BuildingPanelPrefabPath}");
+            return CreateLegacyBuildingPanel(parent);
+        }
+
+        var panel = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+        panel.name = "BuildingPanel";
+        panel.transform.SetAsLastSibling();
+        StretchFull(panel.GetComponent<RectTransform>());
+        panel.SetActive(false);
+        return panel;
     }
 
     private static void WireUiZonePanelContent(Transform uiZonePanel, GameObject panelRoot)
@@ -170,15 +181,14 @@ public static class BuildingUISetup
         }
     }
 
-    private static GameObject CreatePanel(Transform parent)
+    private static GameObject CreateLegacyBuildingPanel(Transform parent)
     {
         var panel = CreateUiObject("BuildingPanel", parent);
         var panelImage = panel.AddComponent<Image>();
         panelImage.color = new Color(0.08f, 0.1f, 0.14f, 0.92f);
 
         var panelRect = panel.GetComponent<RectTransform>();
-        panelRect.anchorMin = Vector2.zero;
-        panelRect.anchorMax = Vector2.one;
+        StretchFull(panelRect);
         panelRect.offsetMin = new Vector2(12f, 12f);
         panelRect.offsetMax = new Vector2(-12f, -12f);
 
@@ -243,7 +253,7 @@ public static class BuildingUISetup
         text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         text.fontSize = fontSize;
         text.color = Color.white;
-        text.alignment = TextAnchor.MiddleLeft;
+        text.alignment = anchor;
         text.horizontalOverflow = HorizontalWrapMode.Wrap;
         text.verticalOverflow = VerticalWrapMode.Overflow;
         return obj;
@@ -251,6 +261,17 @@ public static class BuildingUISetup
 
     private static void Stretch(RectTransform rectTransform)
     {
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+    }
+
+    private static void StretchFull(RectTransform rectTransform)
+    {
+        if (rectTransform == null)
+            return;
+
         rectTransform.anchorMin = Vector2.zero;
         rectTransform.anchorMax = Vector2.one;
         rectTransform.offsetMin = Vector2.zero;

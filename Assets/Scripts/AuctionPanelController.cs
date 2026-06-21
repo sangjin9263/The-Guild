@@ -1,30 +1,45 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
-/// <summary>경매 패널 Lot_List ↔ GateAuctionManager 연결.</summary>
+/// <summary>AuctionPanel_re — slot 목록 + 상세 카드 master-detail.</summary>
 [DisallowMultipleComponent]
 public sealed class AuctionPanelController : MonoBehaviour
 {
-    private const string StartAuctionPrefabPath = "Prefabs/UI/start_auction";
+    private const string StartAuctionPrefabPath = "Prefabs/UI/start_auction_re";
+    private const int SlotCount = 8;
 
-    private static readonly string[] LotContentPaths =
+    private static readonly string[] LotListPaths =
     {
-        "Content/Lot_List/LotViewport/LotContent",
-        "Lot_List/LotViewport/LotContent"
+        "Content/Lot_List",
+        "Lot_List"
     };
 
-    private readonly List<IAuctionLotRowView> _ebayRows = new();
-    private readonly List<IAuctionLotRowView> _englishRows = new();
+    private readonly List<AuctionLotSlotView> _slots = new();
+    private readonly List<GateAuctionLotRuntime> _visibleLots = new();
+
     private GateDatabase _database;
     private AuctionPanelFilterView _filterView;
-    private StartAuctionModalView _startAuctionModal;
+    private AuctionGateDetailView _detailView;
+    private AuctionHelpPopupView _helpPopup;
+    private StartAuctionModalView _englishModal;
+    private GameObject _englishBlockOverlay;
+    private TextMeshProUGUI _emptyLabel;
+
+    private int _selectedIndex = -1;
     private bool _modalEventsWired;
+
+    public int SelectedLotId =>
+        _selectedIndex >= 0 && _selectedIndex < _visibleLots.Count
+            ? _visibleLots[_selectedIndex].LotId
+            : 0;
 
     private void Awake()
     {
         EnsureFilterView();
-        EnsureStartAuctionModal();
-        EnsureRows();
+        EnsureEnglishModal();
+        EnsureViews();
     }
 
     private void OnEnable()
@@ -46,14 +61,16 @@ public sealed class AuctionPanelController : MonoBehaviour
 
         if (_filterView != null)
             _filterView.Applied -= OnFilterApplied;
+
+        SetEnglishBlockVisible(false);
     }
 
     public void PrepareForPanelOpen()
     {
         EnsureFilterView();
         EnsureDatabase();
-        EnsureStartAuctionModal();
-        EnsureRows();
+        EnsureEnglishModal();
+        EnsureViews();
 
         var buildingLevel = GateAuctionManager.Instance != null
             ? GateAuctionManager.TestBuildingLevel
@@ -61,20 +78,20 @@ public sealed class AuctionPanelController : MonoBehaviour
 
         _filterView?.RefreshGradeOptions(_database, buildingLevel);
         _filterView?.ResetToDefaults();
+        RefreshGoldDisplay();
     }
 
     public void RefreshFromManager()
     {
-        if (!EnsureRows())
-            return;
-
         EnsureDatabase();
         EnsureFilterView();
+        EnsureViews();
+        RefreshGoldDisplay();
 
         var manager = GateAuctionManager.Instance;
         if (manager == null)
         {
-            Debug.LogWarning("AuctionPanelController: GateAuctionManager not found.", this);
+            BindLots(System.Array.Empty<GateAuctionLotRuntime>());
             return;
         }
 
@@ -82,217 +99,330 @@ public sealed class AuctionPanelController : MonoBehaviour
             ? _filterView.AppliedCriteria
             : AuctionPanelFilterCriteria.Empty;
 
-        BindFilteredLots(manager.ActiveLots, filter);
-        RefreshGoldDisplay();
-    }
-
-    private void BindFilteredLots(IReadOnlyList<GateAuctionLotRuntime> lots, AuctionPanelFilterCriteria filter)
-    {
-        var ebayLots = new List<GateAuctionLotRuntime>();
-        var englishLots = new List<GateAuctionLotRuntime>();
-
+        _visibleLots.Clear();
+        var lots = manager.ActiveLots;
         for (var i = 0; i < lots.Count; i++)
         {
-            if (!AuctionPanelFilterCriteria.Matches(lots[i], filter, _database))
-                continue;
-
-            if (lots[i].IsEnglish)
-                englishLots.Add(lots[i]);
-            else
-                ebayLots.Add(lots[i]);
+            if (AuctionPanelFilterCriteria.Matches(lots[i], filter, _database))
+                _visibleLots.Add(lots[i]);
         }
 
-        BindRowList(_ebayRows, ebayLots, _database);
-        BindRowList(_englishRows, englishLots, _database);
-        WireEnglishRowModals();
-
-        Debug.Log(
-            $"[AuctionPanel] Bound ebay={ebayLots.Count}/{_ebayRows.Count}, english={englishLots.Count}/{_englishRows.Count}.",
-            this);
+        BindLots(_visibleLots);
     }
 
-    private static void BindRowList(
-        List<IAuctionLotRowView> rows,
-        List<GateAuctionLotRuntime> lots,
-        GateDatabase database)
+    public void NotifyRowsUpdated()
     {
-        for (var i = 0; i < rows.Count; i++)
+        RefreshSlotStatuses();
+        RefreshSelectedDetail();
+        RefreshGoldDisplay();
+        RefreshEnglishBlock();
+    }
+
+    private void BindLots(IReadOnlyList<GateAuctionLotRuntime> lots)
+    {
+        EnsureViews();
+
+        for (var i = 0; i < _slots.Count; i++)
         {
             if (i < lots.Count)
-                rows[i].Bind(lots[i], database);
+                _slots[i].Bind(lots[i], _database);
             else
-                rows[i].Clear();
+                _slots[i].Clear();
         }
+
+        if (lots.Count == 0)
+        {
+            _selectedIndex = -1;
+            _detailView?.Clear();
+            SetEmptyLabelVisible(true);
+            return;
+        }
+
+        SetEmptyLabelVisible(false);
+
+        if (_selectedIndex < 0 || _selectedIndex >= lots.Count)
+            _selectedIndex = 0;
+
+        ApplySelection();
+    }
+
+    private void ApplySelection()
+    {
+        for (var i = 0; i < _slots.Count; i++)
+            _slots[i].SetSelected(i == _selectedIndex);
+
+        RefreshSelectedDetail();
+    }
+
+    private void RefreshSelectedDetail()
+    {
+        if (_selectedIndex < 0 || _selectedIndex >= _visibleLots.Count)
+        {
+            _detailView?.Clear();
+            return;
+        }
+
+        _detailView?.Bind(_visibleLots[_selectedIndex], _database);
+        _slots[_selectedIndex].RefreshStatus();
+    }
+
+    private void RefreshSlotStatuses()
+    {
+        for (var i = 0; i < _slots.Count; i++)
+            _slots[i].RefreshStatus();
+    }
+
+    private void OnSlotClicked(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= _visibleLots.Count)
+            return;
+
+        _selectedIndex = slotIndex;
+        ApplySelection();
+        _helpPopup?.Hide();
     }
 
     private void OnFilterApplied() => RefreshFromManager();
 
-    public void NotifyRowsUpdated()
-    {
-        if (!EnsureRows())
-            return;
-
-        RefreshAllRows();
-        RefreshGoldDisplay();
-    }
-
-    private void RefreshAllRows()
-    {
-        foreach (var row in _ebayRows)
-            row.RefreshInteractiveState();
-        foreach (var row in _englishRows)
-            row.RefreshInteractiveState();
-    }
-
     private void OnAuctionsChanged() => NotifyRowsUpdated();
 
-    private void OnEnglishSessionChanged(int _) => NotifyRowsUpdated();
+    private void OnEnglishSessionChanged(int lotId)
+    {
+        if (lotId == 0)
+            DismissEnglishModal();
+
+        NotifyRowsUpdated();
+    }
+
+    /// <summary>English 세션 종료·취소 후 모달 UI 정리.</summary>
+    public void DismissEnglishModal()
+    {
+        if (_englishModal == null || !_englishModal.gameObject.activeSelf)
+            return;
+
+        _englishModal.Close();
+    }
 
     private void OnGameStateChanged() => RefreshGoldDisplay();
 
-    private bool EnsureRows()
+    private void OnEnglishSessionEnded()
     {
-        var content = FindLotContent();
-        if (content == null)
-        {
-            Debug.LogError(
-                "AuctionPanelController: LotContent not found. Expected Content/Lot_List/LotViewport/LotContent.",
-                this);
-            return false;
-        }
-
-        if (!RowCacheMatchesContent(content))
-            RebuildRowCache(content);
-
-        if (_ebayRows.Count + _englishRows.Count == 0)
-        {
-            Debug.LogError(
-                "AuctionPanelController: LotContent has no ebay/eng lot slots. " +
-                "Run The Guild → Data → Restore Auction Panel Lot Slots.",
-                this);
-            return false;
-        }
-
-        WireEnglishRowModals();
-        return true;
+        SetEnglishBlockVisible(false);
+        NotifyRowsUpdated();
     }
 
-    private bool RowCacheMatchesContent(Transform content)
+    private void EnsureViews()
     {
-        var expectedEbay = 0;
-        var expectedEng = 0;
+        if (_slots.Count > 0)
+            return;
 
-        for (var i = 0; i < content.childCount; i++)
+        var lotList = FindPanelTransform(LotListPaths);
+        if (lotList == null)
         {
-            var name = content.GetChild(i).name;
-            if (name.EndsWith("_eng"))
-                expectedEng++;
-            else if (name.EndsWith("_ebay"))
-                expectedEbay++;
+            Debug.LogError("[AuctionPanel] Content/Lot_List not found.", this);
+            return;
         }
 
-        return _ebayRows.Count == expectedEbay && _englishRows.Count == expectedEng;
-    }
-
-    private void RebuildRowCache(Transform content)
-    {
-        _ebayRows.Clear();
-        _englishRows.Clear();
-
-        for (var i = 0; i < content.childCount; i++)
+        var viewport = lotList.Find("LotViewport");
+        if (viewport == null)
         {
-            var child = content.GetChild(i);
-            var name = child.name;
-
-            if (name.EndsWith("_eng"))
-            {
-                var engRow = child.GetComponent<EnglishAuctionLotRowView>();
-                if (engRow == null)
-                    engRow = child.gameObject.AddComponent<EnglishAuctionLotRowView>();
-                engRow.SetModal(_startAuctionModal);
-                _englishRows.Add(engRow);
-                continue;
-            }
-
-            if (!name.EndsWith("_ebay"))
-            {
-                Debug.LogWarning(
-                    $"AuctionPanelController: skipping unrecognized lot slot '{name}'. " +
-                    "Expected suffix _ebay or _eng.",
-                    child);
-                continue;
-            }
-
-            var ebayRow = child.GetComponent<AuctionLotRowView>();
-            if (ebayRow == null)
-                ebayRow = child.gameObject.AddComponent<AuctionLotRowView>();
-            _ebayRows.Add(ebayRow);
+            Debug.LogError("[AuctionPanel] LotViewport not found.", this);
+            return;
         }
+
+        _helpPopup = GetComponent<AuctionHelpPopupView>() ?? gameObject.AddComponent<AuctionHelpPopupView>();
+
+        var lotInfo = lotList.Find("Lotinfo");
+        _detailView = GetComponent<AuctionGateDetailView>() ?? gameObject.AddComponent<AuctionGateDetailView>();
+        _detailView.Initialize(lotInfo, _englishModal, _helpPopup);
+
+        EnsureEmptyLabel(lotList);
+        EnsureEnglishBlockOverlay();
+
+        var slotCount = Mathf.Min(SlotCount, viewport.childCount);
+        for (var i = 0; i < slotCount; i++)
+        {
+            var child = viewport.GetChild(i);
+            var slot = child.GetComponent<AuctionLotSlotView>() ?? child.gameObject.AddComponent<AuctionLotSlotView>();
+            slot.Initialize(i);
+            slot.WireClick(OnSlotClicked);
+            _slots.Add(slot);
+        }
+
+        HideLegacyEmbeddedModal();
+        HideButtonInfo();
     }
 
-    private void EnsureStartAuctionModal()
+    private void HideButtonInfo()
     {
-        if (_startAuctionModal == null)
-            _startAuctionModal = GetComponentInChildren<StartAuctionModalView>(true);
+        var infoButton = AuctionPanelLayoutFit.FindPanelTransform(transform, "TitleBar/ButtonInfo");
+        if (infoButton != null)
+            infoButton.gameObject.SetActive(false);
+    }
 
-        if (_startAuctionModal == null)
+    private void HideLegacyEmbeddedModal()
+    {
+        CleanupLegacyEnglishModals();
+        EnsureEnglishModal();
+    }
+
+    private void EnsureEmptyLabel(Transform lotList)
+    {
+        if (_emptyLabel != null)
+            return;
+
+        var existing = lotList.Find("EmptyLabel");
+        if (existing != null)
+        {
+            _emptyLabel = existing.GetComponent<TextMeshProUGUI>();
+            return;
+        }
+
+        var go = new GameObject("EmptyLabel", typeof(RectTransform));
+        var rect = go.GetComponent<RectTransform>();
+        rect.SetParent(lotList, false);
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.sizeDelta = new Vector2(400f, 60f);
+        _emptyLabel = go.AddComponent<TextMeshProUGUI>();
+        _emptyLabel.alignment = TextAlignmentOptions.Center;
+        _emptyLabel.fontSize = 28f;
+        _emptyLabel.text = "경매 없음";
+        _emptyLabel.color = Color.black;
+    }
+
+    private void SetEmptyLabelVisible(bool visible)
+    {
+        if (_emptyLabel != null)
+            _emptyLabel.gameObject.SetActive(visible);
+    }
+
+    private void EnsureEnglishBlockOverlay()
+    {
+        if (_englishBlockOverlay != null)
+            return;
+
+        _englishBlockOverlay = new GameObject("EnglishBlockOverlay", typeof(RectTransform));
+        var rect = _englishBlockOverlay.GetComponent<RectTransform>();
+        rect.SetParent(transform, false);
+        rect.SetAsLastSibling();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        var image = _englishBlockOverlay.AddComponent<Image>();
+        image.color = new Color(0f, 0f, 0f, 0.01f);
+        image.raycastTarget = true;
+        _englishBlockOverlay.SetActive(false);
+    }
+
+    private void RefreshEnglishBlock()
+    {
+        var manager = GateAuctionManager.Instance;
+        var active = manager != null && manager.HasActiveEnglishSession;
+        SetEnglishBlockVisible(active);
+    }
+
+    private void SetEnglishBlockVisible(bool visible)
+    {
+        EnsureEnglishBlockOverlay();
+        if (_englishBlockOverlay != null)
+        {
+            _englishBlockOverlay.SetActive(visible);
+            if (visible)
+                _englishBlockOverlay.transform.SetAsLastSibling();
+        }
+
+        if (visible && _englishModal != null && _englishModal.gameObject.activeSelf)
+            _englishModal.transform.SetAsLastSibling();
+    }
+
+    private void EnsureEnglishModal()
+    {
+        CleanupLegacyEnglishModals();
+
+        _englishModal = transform.Find("start_auction_re")?.GetComponent<StartAuctionModalView>();
+
+        if (_englishModal == null)
         {
             var prefab = Resources.Load<GameObject>(StartAuctionPrefabPath);
             if (prefab == null)
             {
-                Debug.LogWarning($"AuctionPanelController: missing Resources/{StartAuctionPrefabPath}", this);
+                Debug.LogWarning($"[AuctionPanel] missing Resources/{StartAuctionPrefabPath}", this);
                 return;
             }
 
             var instance = Instantiate(prefab, transform);
-            instance.name = "start_auction";
-            _startAuctionModal = instance.GetComponent<StartAuctionModalView>();
-            if (_startAuctionModal == null)
-                _startAuctionModal = instance.AddComponent<StartAuctionModalView>();
+            instance.name = "start_auction_re";
+            _englishModal = instance.GetComponent<StartAuctionModalView>();
+            if (_englishModal == null)
+                _englishModal = instance.AddComponent<StartAuctionModalView>();
         }
 
-        ConfigureModalOverlay(_startAuctionModal.GetComponent<RectTransform>());
-        _startAuctionModal.gameObject.SetActive(false);
+        StartAuctionModalView.ConfigureOverlayLayout(_englishModal.GetComponent<RectTransform>());
+        _englishModal.gameObject.SetActive(false);
 
-        if (_startAuctionModal != null && !_modalEventsWired)
+        if (_englishModal != null && !_modalEventsWired)
         {
-            _startAuctionModal.SessionEnded += OnStartAuctionSessionEnded;
+            _englishModal.SessionEnded += OnEnglishSessionEnded;
+            _englishModal.Opened += OnEnglishModalOpened;
+            _englishModal.Closed += OnEnglishModalClosed;
             _modalEventsWired = true;
         }
 
-        WireEnglishRowModals();
+        _detailView?.SetEnglishModal(_englishModal);
     }
 
-    private void WireEnglishRowModals()
+    private void CleanupLegacyEnglishModals()
     {
-        if (_startAuctionModal == null)
+        var legacy = transform.Find("start_auction");
+        if (legacy != null)
+        {
+            if (_englishModal != null && _englishModal.transform == legacy)
+                UnwireEnglishModalEvents();
+
+            Destroy(legacy.gameObject);
+            _englishModal = null;
+        }
+
+        var modals = GetComponentsInChildren<StartAuctionModalView>(true);
+        for (var i = 0; i < modals.Length; i++)
+        {
+            var modal = modals[i];
+            if (modal == null || modal.gameObject.name == "start_auction_re")
+                continue;
+
+            if (_englishModal == modal)
+                UnwireEnglishModalEvents();
+
+            Destroy(modal.gameObject);
+            _englishModal = null;
+        }
+    }
+
+    private void UnwireEnglishModalEvents()
+    {
+        if (_englishModal == null || !_modalEventsWired)
             return;
 
-        foreach (var row in _englishRows)
-        {
-            if (row is EnglishAuctionLotRowView engRow)
-                engRow.SetModal(_startAuctionModal);
-        }
+        _englishModal.SessionEnded -= OnEnglishSessionEnded;
+        _englishModal.Opened -= OnEnglishModalOpened;
+        _englishModal.Closed -= OnEnglishModalClosed;
+        _modalEventsWired = false;
     }
 
-    private static void ConfigureModalOverlay(RectTransform rect) =>
-        StartAuctionModalView.ConfigureOverlayLayout(rect);
+    private void OnEnglishModalOpened() => SetEnglishBlockVisible(true);
 
-    private void OnStartAuctionSessionEnded() => NotifyRowsUpdated();
+    private void OnEnglishModalClosed() => SetEnglishBlockVisible(false);
 
-    private Transform FindLotContent()
+    private Transform FindPanelTransform(params string[] relativePaths)
     {
-        foreach (var path in LotContentPaths)
+        foreach (var path in relativePaths)
         {
-            var found = transform.Find(path);
+            var found = AuctionPanelLayoutFit.FindPanelTransform(transform, path);
             if (found != null)
                 return found;
-        }
-
-        foreach (var rect in GetComponentsInChildren<RectTransform>(true))
-        {
-            if (rect.name == "LotContent")
-                return rect;
         }
 
         return null;
@@ -320,13 +450,24 @@ public sealed class AuctionPanelController : MonoBehaviour
 
     private void RefreshGoldDisplay()
     {
-        var coinText = transform.Find("TitleBar/Coin_UI/Coin_Count")?.GetComponent<TMPro.TextMeshProUGUI>();
+        var coinText = AuctionPanelLayoutFit
+            .FindPanelTransform(transform, "TitleBar/Coin_UI/Coin_Count")
+            ?.GetComponent<TextMeshProUGUI>();
         if (coinText == null)
-            coinText = transform.Find("Coin_UI/Coin_Count")?.GetComponent<TMPro.TextMeshProUGUI>();
-        if (coinText == null)
-            coinText = GetComponentInChildren<TMPro.TextMeshProUGUI>(true);
+            return;
 
-        if (coinText != null && coinText.name == "Coin_Count" && GameManager.Instance != null)
+        if (GameManager.Instance != null)
             coinText.text = $"{GameManager.Instance.Gold:N0}";
+
+        var unit = AuctionPanelLayoutFit
+            .FindPanelTransform(transform, "TitleBar/Coin_UI/Coin_Unit")
+            ?.GetComponent<TextMeshProUGUI>();
+        if (unit != null && string.IsNullOrWhiteSpace(unit.text))
+            unit.text = "G";
+    }
+
+    private void OnDestroy()
+    {
+        UnwireEnglishModalEvents();
     }
 }
